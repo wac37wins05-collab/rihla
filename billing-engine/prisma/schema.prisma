@@ -1,0 +1,944 @@
+// ============================================================
+// RIHLA DMC — ERP Billing Engine
+// Prisma Schema v1.0 — Production Grade
+// All monetary values use Decimal(19,4) — never Float
+// Soft-delete on all financial entities (deletedAt)
+// Historical exchange rates preserved at transaction time
+// ============================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────
+
+enum InvoiceType {
+  PROFORMA
+  FINAL
+  CREDIT_NOTE
+  SUPPLIER_INVOICE
+  RECEIPT
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PARTIAL
+  PAID
+  OVERDUE
+  DISPUTED
+  CANCELLED
+  VOID
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  STRIPE
+  CASH
+  CHECK
+  CREDIT_CARD
+  CRYPTO
+  OFFSET            // internal credit offset
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  DISPUTED
+  VOID
+}
+
+enum TransactionType {
+  PAYMENT
+  REFUND
+  REVERSAL
+  INVOICE_ISSUED
+  CREDIT_NOTE
+  SUPPLIER_INVOICE
+  SUPPLIER_PAYMENT
+  CURRENCY_GAIN
+  CURRENCY_LOSS
+}
+
+enum DocumentStatus {
+  DRAFT
+  ACTIVE
+  CANCELLED
+  SUPERSEDED
+}
+
+enum TaxType {
+  VAT
+  GST
+  SALES_TAX
+  WITHHOLDING
+  EXEMPT
+}
+
+enum BookingType {
+  FIT
+  GROUP
+  MICE
+  CORPORATE
+  B2B
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  VOID
+  SEND
+  PAY
+  REFUND
+  ALLOCATE
+  EXPORT
+  VIEW
+}
+
+enum CurrencyRounding {
+  HALF_UP
+  HALF_EVEN
+  CEILING
+  FLOOR
+}
+
+// ─────────────────────────────────────────
+// TENANT / COMPANY
+// ─────────────────────────────────────────
+
+model Company {
+  id                  String   @id @default(uuid())
+  name                String   @db.VarChar(200)
+  legalName           String?  @db.VarChar(200)
+  registrationNumber  String?  @db.VarChar(50)
+  taxId               String?  @db.VarChar(50)
+  taxNumber           String?  @db.VarChar(50)
+  email               String   @db.VarChar(255)
+  phone               String?  @db.VarChar(30)
+  address             String?  @db.Text
+  city                String?  @db.VarChar(100)
+  country             String   @default("MA") @db.VarChar(2)
+  postalCode          String?  @db.VarChar(20)
+  baseCurrency        String   @default("MAD") @db.VarChar(3)
+  logoUrl             String?  @db.VarChar(500)
+  invoicePrefix       String   @default("INV") @db.VarChar(10)
+  proformaPrefix      String   @default("PRO") @db.VarChar(10)
+  creditNotePrefix    String   @default("CN") @db.VarChar(10)
+  supplierInvPrefix   String   @default("SINV") @db.VarChar(10)
+  fiscalYearStart     Int      @default(1)  // month 1-12
+  defaultPaymentDays  Int      @default(30)
+  defaultTaxRateId    String?
+  bankDetails         Json?    // {iban, swift, bankName, accountName}
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  deletedAt           DateTime?
+
+  customers           Customer[]
+  suppliers           Supplier[]
+  invoices            Invoice[]
+  payments            Payment[]
+  currencies          Currency[]
+  taxRates            TaxRate[]
+  invoiceSequences    InvoiceSequence[]
+  bookings            Booking[]
+  auditLogs           AuditLog[]
+  exchangeRates       ExchangeRate[]
+
+  @@map("companies")
+}
+
+// ─────────────────────────────────────────
+// CUSTOMER
+// ─────────────────────────────────────────
+
+model Customer {
+  id              String    @id @default(uuid())
+  companyId       String
+  code            String    @db.VarChar(20)
+  name            String?   @db.VarChar(200)
+  type            String    @default("B2C") @db.VarChar(10) // B2C | B2B | CORPORATE
+  firstName       String?   @db.VarChar(100)
+  lastName        String?   @db.VarChar(100)
+  companyName     String?   @db.VarChar(200)
+  email           String    @db.VarChar(255)
+  taxNumber       String?   @db.VarChar(50)
+  phone           String?   @db.VarChar(30)
+  address         String?   @db.Text
+  city            String?   @db.VarChar(100)
+  country         String?   @db.VarChar(2)
+  postalCode      String?   @db.VarChar(20)
+  taxId           String?   @db.VarChar(50)
+  currency        String    @default("EUR") @db.VarChar(3)
+  creditLimit     Decimal   @default(0) @db.Decimal(19, 4)
+  creditUsed      Decimal   @default(0) @db.Decimal(19, 4)
+  paymentTermDays Int       @default(30)
+  notes           String?   @db.Text
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  company         Company   @relation(fields: [companyId], references: [id])
+  bookings        Booking[]
+  invoices        Invoice[]
+  payments        Payment[]
+  creditNotes     CreditNote[]
+
+  @@unique([companyId, code])
+  @@index([companyId, email])
+  @@index([companyId, isActive])
+  @@map("customers")
+}
+
+// ─────────────────────────────────────────
+// SUPPLIER
+// ─────────────────────────────────────────
+
+model Supplier {
+  id              String    @id @default(uuid())
+  companyId       String
+  code            String    @db.VarChar(20)
+  name            String    @db.VarChar(200)
+  category        String    @db.VarChar(50)  // hotel|transport|guide|restaurant|activity
+  email           String?   @db.VarChar(255)
+  phone           String?   @db.VarChar(30)
+  address         String?   @db.Text
+  country         String?   @db.VarChar(2)
+  taxId           String?   @db.VarChar(50)
+  currency        String    @default("MAD") @db.VarChar(3)
+  paymentTermDays Int       @default(30)
+  bankDetails     Json?     // {iban, swift, bankName}
+  rating          Int?      // 1-5
+  isActive        Boolean   @default(true)
+  creditBalance   Decimal   @default(0) @db.Decimal(19, 4)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  company         Company          @relation(fields: [companyId], references: [id])
+  supplierInvoices SupplierInvoice[]
+  supplierPayments SupplierPayment[]
+  bookingItems    BookingItem[]
+
+  @@unique([companyId, code])
+  @@index([companyId, category, isActive])
+  @@map("suppliers")
+}
+
+// ─────────────────────────────────────────
+// CURRENCY & EXCHANGE RATES
+// ─────────────────────────────────────────
+
+model Currency {
+  id               String   @id @default(uuid())
+  companyId        String
+  code             String   @db.VarChar(3)
+  name             String   @db.VarChar(50)
+  symbol           String   @db.VarChar(5)
+  decimalPlaces    Int      @default(2)
+  rounding         CurrencyRounding @default(HALF_UP)
+  isBase           Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company          Company  @relation(fields: [companyId], references: [id])
+  exchangeRates    ExchangeRate[]
+
+  @@unique([companyId, code])
+  @@map("currencies")
+}
+
+model ExchangeRate {
+  id              String   @id @default(uuid())
+  companyId       String
+  currencyId      String
+  currencyCode    String   @db.VarChar(3)
+  baseCurrencyCode String  @db.VarChar(3)
+  rate            Decimal  @db.Decimal(19, 8)  // 1 unit of currency = rate units of base
+  inverseRate     Decimal  @db.Decimal(19, 8)
+  effectiveDate   DateTime
+  source          String   @default("MANUAL") @db.VarChar(20) // MANUAL|ECB|CBE|OPEN_ER
+  createdAt       DateTime @default(now())
+
+  company         Company  @relation(fields: [companyId], references: [id])
+  currency        Currency @relation(fields: [currencyId], references: [id])
+
+  @@unique([companyId, currencyCode, effectiveDate])
+  @@index([companyId, currencyCode, effectiveDate])
+  @@map("exchange_rates")
+}
+
+// ─────────────────────────────────────────
+// TAX RATES
+// ─────────────────────────────────────────
+
+model TaxRate {
+  id              String   @id @default(uuid())
+  companyId       String
+  name            String   @db.VarChar(100)
+  code            String   @db.VarChar(20)
+  type            TaxType  @default(VAT)
+  rate            Decimal  @db.Decimal(7, 4)   // e.g. 20.0000 for 20%
+  country         String   @db.VarChar(2)
+  isDefault       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  validFrom       DateTime @default(now())
+  validUntil      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company         Company  @relation(fields: [companyId], references: [id])
+  invoiceItems    InvoiceItem[]
+  quotationItems  QuotationItem[]
+
+  @@unique([companyId, code])
+  @@index([companyId, country, isActive])
+  @@map("tax_rates")
+}
+
+// ─────────────────────────────────────────
+// INVOICE SEQUENCES (atomic numbering)
+// ─────────────────────────────────────────
+
+model InvoiceSequence {
+  id          String      @id @default(uuid())
+  companyId   String
+  type        InvoiceType
+  year        Int
+  prefix      String      @db.VarChar(10)
+  lastNumber  Int         @default(0)
+  padding     Int         @default(6)  // zero-padding digits
+  updatedAt   DateTime    @updatedAt
+
+  company     Company     @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, type, year])
+  @@map("invoice_sequences")
+}
+
+// ─────────────────────────────────────────
+// BOOKING / DOSSIER
+// ─────────────────────────────────────────
+
+model Booking {
+  id              String      @id @default(uuid())
+  companyId       String
+  reference       String      @db.VarChar(50)
+  type            BookingType @default(FIT)
+  customerId      String
+  agencyId        String?
+  title           String      @db.VarChar(300)
+  bookingRef      String?     @db.VarChar(50)
+  destination     String?     @db.VarChar(200)
+  startDate       DateTime?
+  endDate         DateTime?
+  paxCount        Int         @default(1)
+  currency        String      @default("EUR") @db.VarChar(3)
+  // Financials
+  quotedAmount    Decimal     @default(0) @db.Decimal(19, 4)
+  invoicedAmount  Decimal     @default(0) @db.Decimal(19, 4)
+  paidAmount      Decimal     @default(0) @db.Decimal(19, 4)
+  supplierCost    Decimal     @default(0) @db.Decimal(19, 4)
+  margin          Decimal     @default(0) @db.Decimal(19, 4)
+  marginPct       Decimal     @default(0) @db.Decimal(7, 4)
+  status          String      @default("OPEN") @db.VarChar(20)
+  notes           String?     @db.Text
+  tags            Json?
+  createdBy       String?     @db.VarChar(36)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+
+  company         Company     @relation(fields: [companyId], references: [id])
+  customer        Customer    @relation(fields: [customerId], references: [id])
+  quotations      Quotation[]
+  invoices        Invoice[]
+  supplierInvoices SupplierInvoice[]
+  items           BookingItem[]
+
+  @@unique([companyId, reference])
+  @@index([companyId, customerId])
+  @@index([companyId, status])
+  @@index([companyId, startDate])
+  @@map("bookings")
+}
+
+model BookingItem {
+  id              String   @id @default(uuid())
+  bookingId       String
+  supplierId      String?
+  category        String   @db.VarChar(50)  // hotel|transport|guide|meal|activity
+  description     String   @db.VarChar(500)
+  quantity        Decimal  @db.Decimal(10, 2)
+  unitCostMAD     Decimal  @db.Decimal(19, 4)
+  totalCostMAD    Decimal  @db.Decimal(19, 4)
+  currency        String   @default("MAD") @db.VarChar(3)
+  unitCostOrig    Decimal  @db.Decimal(19, 4)  // in original currency
+  serviceDate     DateTime?
+  isConfirmed     Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  booking         Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  supplier        Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@index([bookingId])
+  @@map("booking_items")
+}
+
+// ─────────────────────────────────────────
+// QUOTATION
+// ─────────────────────────────────────────
+
+model Quotation {
+  id              String         @id @default(uuid())
+  companyId       String
+  bookingId       String?
+  customerId      String?
+  number          String         @db.VarChar(30)
+  version         Int            @default(1)
+  status          DocumentStatus @default(DRAFT)
+  currency        String         @db.VarChar(3)
+  // Exchange rate at time of quotation
+  exchangeRate    Decimal        @default(1) @db.Decimal(19, 8)
+  baseCurrency    String         @db.VarChar(3)
+  // Amounts (in quotation currency)
+  subtotal        Decimal        @default(0) @db.Decimal(19, 4)
+  discountAmt     Decimal        @default(0) @db.Decimal(19, 4)
+  discountPct     Decimal        @default(0) @db.Decimal(7, 4)
+  taxAmount       Decimal        @default(0) @db.Decimal(19, 4)
+  total           Decimal        @default(0) @db.Decimal(19, 4)
+  // Base currency equivalent
+  totalBase       Decimal        @default(0) @db.Decimal(19, 4)
+  marginAmount    Decimal        @default(0) @db.Decimal(19, 4)
+  marginPct       Decimal        @default(0) @db.Decimal(7, 4)
+  validUntil      DateTime?
+  notes           String?        @db.Text
+  terms           String?        @db.Text
+  convertedToInvId String?
+  createdBy       String?        @db.VarChar(36)
+  sentAt          DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+
+  booking         Booking?       @relation(fields: [bookingId], references: [id])
+  items           QuotationItem[]
+  invoices        Invoice[]      @relation("QuotationInvoices")
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([companyId, bookingId])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id              String    @id @default(uuid())
+  quotationId     String
+  taxRateId       String?
+  sortOrder       Int       @default(0)
+  category        String?   @db.VarChar(50)
+  description     String    @db.VarChar(500)
+  details         String?   @db.Text
+  quantity        Decimal   @db.Decimal(10, 2)
+  unitPrice       Decimal   @db.Decimal(19, 4)
+  unitCost        Decimal   @default(0) @db.Decimal(19, 4)
+  discountPct     Decimal   @default(0) @db.Decimal(7, 4)
+  discountAmt     Decimal   @default(0) @db.Decimal(19, 4)
+  discountAmount  Decimal   @default(0) @db.Decimal(19, 4)
+  lineSubtotal    Decimal   @db.Decimal(19, 4)  // qty * unitPrice - discount
+  subtotalExcl    Decimal   @default(0) @db.Decimal(19, 4)
+  taxRate         Decimal   @default(0) @db.Decimal(7, 4)
+  taxRatePct      Decimal   @default(0) @db.Decimal(7, 4)
+  taxAmount       Decimal   @default(0) @db.Decimal(19, 4)
+  lineTotal       Decimal   @db.Decimal(19, 4)
+  subtotalIncl    Decimal   @default(0) @db.Decimal(19, 4)
+  margin          Decimal   @default(0) @db.Decimal(19, 4)
+  marginPct       Decimal   @default(0) @db.Decimal(7, 4)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  quotation       Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  taxRateRef      TaxRate?  @relation(fields: [taxRateId], references: [id])
+
+  @@index([quotationId])
+  @@map("quotation_items")
+}
+
+// ─────────────────────────────────────────
+// INVOICE (covers Proforma, Final, Credit Note)
+// ─────────────────────────────────────────
+
+model Invoice {
+  id              String        @id @default(uuid())
+  companyId       String
+  bookingId       String?
+  customerId      String
+  quotationId     String?
+  parentInvoiceId String?       // for credit notes linked to original invoice
+  number          String        @db.VarChar(30)
+  invoiceNumber   String        @db.VarChar(30)
+  type            InvoiceType   @default(FINAL)
+  status          InvoiceStatus @default(DRAFT)
+  currency        String        @db.VarChar(3)
+  // Historical exchange rate locked at invoice creation
+  exchangeRate    Decimal       @default(1) @db.Decimal(19, 8)
+  baseCurrency    String        @db.VarChar(3)
+  exchangeRateDate DateTime?
+  // Amounts in invoice currency (immutable after SENT)
+  subtotal        Decimal       @default(0) @db.Decimal(19, 4)
+  subtotalAmount  Decimal       @default(0) @db.Decimal(19, 4)
+  discountAmt     Decimal       @default(0) @db.Decimal(19, 4)
+  discountPct     Decimal       @default(0) @db.Decimal(7, 4)
+  taxAmount       Decimal       @default(0) @db.Decimal(19, 4)
+  total           Decimal       @default(0) @db.Decimal(19, 4)
+  totalAmount     Decimal       @default(0) @db.Decimal(19, 4)
+  paidAmount      Decimal       @default(0) @db.Decimal(19, 4)
+  amountPaid      Decimal       @default(0) @db.Decimal(19, 4)
+  balanceDue      Decimal       @default(0) @db.Decimal(19, 4)
+  amountDue       Decimal       @default(0) @db.Decimal(19, 4)
+  // Base currency equivalents (locked at rate above)
+  totalBase       Decimal       @default(0) @db.Decimal(19, 4)
+  totalAmountBase Decimal       @default(0) @db.Decimal(19, 4)
+  paidAmountBase  Decimal       @default(0) @db.Decimal(19, 4)
+  // Deposit/installment tracking
+  depositPct      Decimal       @default(0) @db.Decimal(7, 4)
+  depositAmount   Decimal       @default(0) @db.Decimal(19, 4)
+  depositDueDate  DateTime?
+  // Dates
+  issueDate       DateTime      @default(now())
+  dueDate         DateTime?
+  sentAt          DateTime?
+  paidAt          DateTime?
+  cancelledAt     DateTime?
+  voidedAt        DateTime?
+  voidReason      String?       @db.Text
+  // Context
+  billingAddress  Json?         // snapshot at invoice time
+  notes           String?       @db.Text
+  internalNotes   String?       @db.Text
+  terms           String?       @db.Text
+  termsAndConditions String?    @db.Text
+  taxBreakdown    Json?
+  pdfUrl          String?       @db.VarChar(500)
+  pdfGeneratedAt  DateTime?
+  sentTo          String?       @db.VarChar(255)
+  sentCount       Int           @default(0)
+  createdBy       String?       @db.VarChar(36)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?     // soft delete — never hard delete invoices
+
+  company         Company       @relation(fields: [companyId], references: [id])
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  booking         Booking?      @relation(fields: [bookingId], references: [id])
+  quotation       Quotation?    @relation("QuotationInvoices", fields: [quotationId], references: [id])
+  parentInvoice   Invoice?      @relation("CreditNotes", fields: [parentInvoiceId], references: [id])
+  creditNotes     Invoice[]     @relation("CreditNotes")
+  items           InvoiceItem[]
+  allocations     PaymentAllocation[]
+  auditLogs       InvoiceAuditLog[]
+  creditNoteRefs  CreditNote[]  @relation("CreditNoteInvoice")
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([companyId, customerId, status])
+  @@index([companyId, bookingId])
+  @@index([companyId, type, issueDate])
+  @@index([companyId, dueDate, status])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id              String    @id @default(uuid())
+  invoiceId       String
+  taxRateId       String?
+  sortOrder       Int       @default(0)
+  category        String?   @db.VarChar(50)
+  description     String    @db.VarChar(500)
+  details         String?   @db.Text
+  quantity        Decimal   @db.Decimal(10, 2)
+  unitPrice       Decimal   @db.Decimal(19, 4)
+  discountPct     Decimal   @default(0) @db.Decimal(7, 4)
+  discountAmt     Decimal   @default(0) @db.Decimal(19, 4)
+  discountAmount  Decimal   @default(0) @db.Decimal(19, 4)
+  lineSubtotal    Decimal   @db.Decimal(19, 4)
+  subtotalExcl    Decimal   @default(0) @db.Decimal(19, 4)
+  taxRate         Decimal   @default(0) @db.Decimal(7, 4)
+  taxRatePct      Decimal   @default(0) @db.Decimal(7, 4)
+  taxAmount       Decimal   @default(0) @db.Decimal(19, 4)
+  lineTotal       Decimal   @db.Decimal(19, 4)
+  subtotalIncl    Decimal   @default(0) @db.Decimal(19, 4)
+  // Base currency snapshot
+  lineTotalBase   Decimal   @default(0) @db.Decimal(19, 4)
+  serviceDate     DateTime?
+  periodStart     DateTime?
+  periodEnd       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  invoice         Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  taxRateRef      TaxRate?  @relation(fields: [taxRateId], references: [id])
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+// ─────────────────────────────────────────
+// CREDIT NOTE (standalone tracking)
+// ─────────────────────────────────────────
+
+model CreditNote {
+  id              String    @id @default(uuid())
+  companyId       String
+  customerId      String
+  invoiceId       String    // original invoice being credited
+  number          String    @db.VarChar(30)
+  reason          String    @db.VarChar(500)
+  amount          Decimal   @db.Decimal(19, 4)
+  taxAmount       Decimal   @default(0) @db.Decimal(19, 4)
+  total           Decimal   @db.Decimal(19, 4)
+  currency        String    @db.VarChar(3)
+  appliedAmount   Decimal   @default(0) @db.Decimal(19, 4)
+  remainingAmount Decimal   @db.Decimal(19, 4)
+  status          String    @default("OPEN") @db.VarChar(20) // OPEN|FULLY_APPLIED|EXPIRED
+  expiresAt       DateTime?
+  createdBy       String?   @db.VarChar(36)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  customer        Customer  @relation(fields: [customerId], references: [id])
+  invoice         Invoice   @relation("CreditNoteInvoice", fields: [invoiceId], references: [id])
+  applications    CreditNoteApplication[]
+
+  @@unique([companyId, number])
+  @@index([companyId, customerId, status])
+  @@map("credit_notes")
+}
+
+model CreditNoteApplication {
+  id              String    @id @default(uuid())
+  creditNoteId    String
+  appliedToId     String    // invoice or payment id
+  appliedToType   String    @db.VarChar(20) // INVOICE|PAYMENT
+  amount          Decimal   @db.Decimal(19, 4)
+  appliedAt       DateTime  @default(now())
+  appliedBy       String?   @db.VarChar(36)
+
+  creditNote      CreditNote @relation(fields: [creditNoteId], references: [id])
+
+  @@index([creditNoteId])
+  @@map("credit_note_applications")
+}
+
+// ─────────────────────────────────────────
+// PAYMENT
+// ─────────────────────────────────────────
+
+model Payment {
+  id                  String        @id @default(uuid())
+  companyId           String
+  customerId          String
+  reference           String        @db.VarChar(50)
+  method              PaymentMethod
+  status              PaymentStatus @default(PENDING)
+  currency            String        @db.VarChar(3)
+  amount              Decimal       @db.Decimal(19, 4)
+  // Historical rate at payment time
+  exchangeRate        Decimal       @default(1) @db.Decimal(19, 8)
+  baseCurrency        String        @db.VarChar(3)
+  amountBase          Decimal       @db.Decimal(19, 4)
+  // Allocation tracking
+  allocatedAmount     Decimal       @default(0) @db.Decimal(19, 4)
+  unallocatedAmount   Decimal       @db.Decimal(19, 4)
+  // Provider info
+  gatewayRef          String?       @db.VarChar(200)  // Stripe charge ID etc
+  gatewayResponse     Json?
+  bankRef             String?       @db.VarChar(100)
+  // Dates
+  receivedAt          DateTime      @default(now())
+  settledAt           DateTime?
+  failedAt            DateTime?
+  refundedAt          DateTime?
+  refundedAmount      Decimal       @default(0) @db.Decimal(19, 4)
+  notes               String?       @db.Text
+  createdBy           String?       @db.VarChar(36)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  deletedAt           DateTime?
+
+  company             Company       @relation(fields: [companyId], references: [id])
+  customer            Customer      @relation(fields: [customerId], references: [id])
+  allocations         PaymentAllocation[]
+  refunds             Refund[]
+
+  @@unique([companyId, reference])
+  @@index([companyId, customerId, status])
+  @@index([companyId, status, receivedAt])
+  @@map("payments")
+}
+
+// Payment ↔ Invoice reconciliation (many-to-many)
+model PaymentAllocation {
+  id          String   @id @default(uuid())
+  paymentId   String
+  invoiceId   String
+  allocatedAmount Decimal @default(0) @db.Decimal(19, 4)
+  allocatedAmountBase Decimal @default(0) @db.Decimal(19, 4)
+  amount      Decimal  @db.Decimal(19, 4)        // in payment currency
+  amountBase  Decimal  @db.Decimal(19, 4)        // in base currency
+  allocatedAt DateTime @default(now())
+  allocatedBy String?  @db.VarChar(36)
+  notes       String?  @db.VarChar(500)
+  isReversed  Boolean  @default(false)
+  reversedAt  DateTime?
+  reversedBy  String?  @db.VarChar(36)
+
+  payment     Payment  @relation(fields: [paymentId], references: [id])
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+
+  @@unique([paymentId, invoiceId])
+  @@index([invoiceId])
+  @@index([paymentId])
+  @@map("payment_allocations")
+}
+
+model Refund {
+  id            String   @id @default(uuid())
+  companyId     String
+  paymentId     String
+  amount        Decimal  @db.Decimal(19, 4)
+  currency      String   @db.VarChar(3)
+  reason        String   @db.VarChar(500)
+  method        PaymentMethod
+  gatewayRef    String?  @db.VarChar(200)
+  status        String   @default("PENDING") @db.VarChar(20)
+  processedAt   DateTime?
+  createdBy     String?  @db.VarChar(36)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  payment       Payment  @relation(fields: [paymentId], references: [id])
+
+  @@index([paymentId])
+  @@map("refunds")
+}
+
+// ─────────────────────────────────────────
+// SUPPLIER INVOICES
+// ─────────────────────────────────────────
+
+model SupplierInvoice {
+  id              String        @id @default(uuid())
+  companyId       String
+  supplierId      String
+  bookingId       String?
+  number          String        @db.VarChar(30)   // our internal reference
+  supplierRef     String?       @db.VarChar(100)  // supplier's own invoice number
+  currency        String        @db.VarChar(3)
+  exchangeRate    Decimal       @default(1) @db.Decimal(19, 8)
+  baseCurrency    String        @db.VarChar(3)
+  subtotal        Decimal       @db.Decimal(19, 4)
+  taxAmount       Decimal       @default(0) @db.Decimal(19, 4)
+  total           Decimal       @db.Decimal(19, 4)
+  totalBase       Decimal       @db.Decimal(19, 4)
+  totalAmountBase Decimal       @default(0) @db.Decimal(19, 4)
+  paidAmount      Decimal       @default(0) @db.Decimal(19, 4)
+  balanceDue      Decimal       @db.Decimal(19, 4)
+  status          String        @default("PENDING") @db.VarChar(20)
+  // PENDING|APPROVED|PARTIAL|PAID|DISPUTED|CANCELLED
+  issueDate       DateTime
+  invoiceDate     DateTime?
+  dueDate         DateTime?
+  paidAt          DateTime?
+  notes           String?       @db.Text
+  documentUrl     String?       @db.VarChar(500)
+  createdBy       String?       @db.VarChar(36)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+
+  supplier        Supplier      @relation(fields: [supplierId], references: [id])
+  booking         Booking?      @relation(fields: [bookingId], references: [id])
+  supplierPayments SupplierPayment[]
+  items           SupplierInvoiceItem[]
+
+  @@unique([companyId, number])
+  @@index([companyId, supplierId, status])
+  @@index([companyId, bookingId])
+  @@index([companyId, dueDate, status])
+  @@map("supplier_invoices")
+}
+
+model SupplierInvoiceItem {
+  id              String          @id @default(uuid())
+  supplierInvoiceId String
+  description     String          @db.VarChar(500)
+  category        String?         @db.VarChar(50)
+  quantity        Decimal         @db.Decimal(10, 2)
+  unitPrice       Decimal         @db.Decimal(19, 4)
+  taxRate         Decimal         @default(0) @db.Decimal(7, 4)
+  taxAmount       Decimal         @default(0) @db.Decimal(19, 4)
+  lineTotal       Decimal         @db.Decimal(19, 4)
+  serviceDate     DateTime?
+  createdAt       DateTime        @default(now())
+
+  supplierInvoice SupplierInvoice @relation(fields: [supplierInvoiceId], references: [id], onDelete: Cascade)
+
+  @@index([supplierInvoiceId])
+  @@map("supplier_invoice_items")
+}
+
+model SupplierPayment {
+  id                String          @id @default(uuid())
+  companyId         String
+  supplierId        String
+  supplierInvoiceId String?
+  reference         String          @db.VarChar(50)
+  method            PaymentMethod
+  amount            Decimal         @db.Decimal(19, 4)
+  currency          String          @db.VarChar(3)
+  exchangeRate      Decimal         @default(1) @db.Decimal(19, 8)
+  amountBase        Decimal         @db.Decimal(19, 4)
+  status            PaymentStatus   @default(PENDING)
+  paidAt            DateTime?
+  bankRef           String?         @db.VarChar(100)
+  notes             String?         @db.Text
+  createdBy         String?         @db.VarChar(36)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  supplier          Supplier        @relation(fields: [supplierId], references: [id])
+  supplierInvoice   SupplierInvoice? @relation(fields: [supplierInvoiceId], references: [id])
+
+  @@index([companyId, supplierId, status])
+  @@map("supplier_payments")
+}
+
+// ─────────────────────────────────────────
+// FINANCIAL TRANSACTIONS (immutable ledger)
+// ─────────────────────────────────────────
+
+model FinancialTransaction {
+  id              String   @id @default(uuid())
+  companyId       String
+  type            TransactionType
+  referenceType   String   @db.VarChar(20)  // INVOICE|PAYMENT|SUPPLIER_INV|etc
+  referenceId     String   @db.VarChar(36)
+  currency        String   @db.VarChar(3)
+  amount          Decimal  @db.Decimal(19, 4)
+  baseCurrency    String   @db.VarChar(3)
+  amountBase      Decimal  @db.Decimal(19, 4)
+  exchangeRate    Decimal  @db.Decimal(19, 8)
+  description     String   @db.VarChar(500)
+  bookingId       String?
+  customerId      String?
+  supplierId      String?
+  ledgerAccount   String?  @db.VarChar(20)  // chart of accounts code
+  transactionDate DateTime @default(now())
+  period          String?  @db.VarChar(7)   // YYYY-MM for fast reporting
+  // This record is IMMUTABLE after creation
+  createdBy       String?  @db.VarChar(36)
+  createdAt       DateTime @default(now())
+
+  @@index([companyId, type, period])
+  @@index([companyId, referenceType, referenceId])
+  @@index([companyId, bookingId])
+  @@index([companyId, period])
+  @@map("financial_transactions")
+}
+
+// ─────────────────────────────────────────
+// AUDIT LOGS
+// ─────────────────────────────────────────
+
+model AuditLog {
+  id           String      @id @default(uuid())
+  companyId    String
+  userId       String?     @db.VarChar(36)
+  userEmail    String?     @db.VarChar(255)
+  action       AuditAction
+  entityType   String      @db.VarChar(50)
+  entityId     String      @db.VarChar(36)
+  entityRef    String?     @db.VarChar(50)  // human-readable ref (invoice number)
+  before       Json?
+  after        Json?
+  changedFields Json?
+  ipAddress    String?     @db.VarChar(45)
+  userAgent    String?     @db.VarChar(500)
+  notes        String?     @db.VarChar(500)
+  createdAt    DateTime    @default(now())
+
+  company      Company     @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, entityType, entityId])
+  @@index([companyId, userId])
+  @@index([companyId, action, createdAt])
+  @@map("audit_logs")
+}
+
+model InvoiceAuditLog {
+  id          String      @id @default(uuid())
+  invoiceId   String
+  userId      String?     @db.VarChar(36)
+  action      String      @db.VarChar(50)
+  fromStatus  String?     @db.VarChar(20)
+  toStatus    String?     @db.VarChar(20)
+  changes     Json?
+  notes       String?     @db.VarChar(500)
+  createdAt   DateTime    @default(now())
+
+  invoice     Invoice     @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId, createdAt])
+  @@map("invoice_audit_logs")
+}
+
+// ─────────────────────────────────────────
+// COMMISSION TRACKING
+// ─────────────────────────────────────────
+
+model Commission {
+  id              String   @id @default(uuid())
+  companyId       String
+  bookingId       String?
+  invoiceId       String?
+  agentId         String?  @db.VarChar(36)
+  agencyId        String?  @db.VarChar(36)
+  type            String   @db.VarChar(30)  // AGENCY|AGENT|REFERRAL
+  basedOnAmount   Decimal  @db.Decimal(19, 4)
+  rate            Decimal  @db.Decimal(7, 4)
+  amount          Decimal  @db.Decimal(19, 4)
+  amountBase      Decimal  @default(0) @db.Decimal(19, 4)
+  invoiceDate     DateTime?
+  currency        String   @db.VarChar(3)
+  status          String   @default("PENDING") @db.VarChar(20)
+  // PENDING|APPROVED|PAID|CANCELLED
+  paidAmount      Decimal  @default(0) @db.Decimal(19, 4)
+  paidAt          DateTime?
+  dueDate         DateTime?
+  notes           String?  @db.VarChar(500)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([companyId, status])
+  @@index([companyId, agencyId])
+  @@index([companyId, bookingId])
+  @@map("commissions")
+}

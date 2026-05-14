@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#F6EEE6"/>
+<title>RIHLA Chauffeur — Khalid Mansouri</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --amber:#f59e0b;--amber2:#d97706;
+  --bg:#0b0e17;--bg2:#111520;--card:#1a2035;
+  --border:rgba(255,255,255,0.07);
+  --text:#f1f5f9;--muted:#64748b;--muted2:#94a3b8;
+  --green:#22c55e;--indigo:#6366f1;--red:#ef4444;
+  --safe:env(safe-area-inset-bottom,16px);
+}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh;max-width:430px;margin:0 auto;padding-bottom:calc(70px + var(--safe))}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.page{display:none;animation:fadeUp .25s ease}
+.page.active{display:block}
+
+/* HEADER */
+.app-header{background:rgba(11,14,23,.92);backdrop-filter:blur(16px);position:sticky;top:0;z-index:50;padding:14px 18px 12px;border-bottom:1px solid var(--border)}
+.header-row{display:flex;align-items:center;justify-content:space-between}
+.driver-info{display:flex;align-items:center;gap:10px}
+.driver-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--amber),var(--amber2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#0b0e17}
+.driver-name{font-size:15px;font-weight:800;color:#fff}
+.driver-role{font-size:11px;color:var(--muted)}
+.vehicle-pill{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--amber);display:flex;align-items:center;gap:5px}
+
+/* TABS */
+.tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(17,21,32,.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:8px 0 calc(8px + var(--safe));z-index:100}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;cursor:pointer;border:none;background:none;color:var(--muted);font-size:10px;font-weight:600;transition:color .2s}
+.tab svg{width:22px;height:22px;stroke-width:1.8}
+.tab.active{color:var(--amber)}
+
+/* SCREEN */
+.screen{padding:14px 14px 0}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 12px;text-align:center}
+.kpi-val{font-size:26px;font-weight:900;line-height:1}
+.kpi-lbl{font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.4px}
+
+/* NEXT COURSE HERO */
+.next-hero{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.04));border:1px solid rgba(245,158,11,.25);border-radius:18px;padding:22px 20px;margin-bottom:14px}
+.next-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--amber);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.blink-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);animation:blink 1s infinite}
+.next-time{font-size:36px;font-weight:900;color:#fff;line-height:1;margin-bottom:4px}
+.next-course{font-size:16px;font-weight:800;color:#fff;margin-bottom:8px}
+.next-meta{font-size:13px;color:var(--muted2);line-height:1.6}
+.next-meta b{color:#fff}
+.next-actions{display:flex;gap:10px;margin-top:16px}
+.btn-big{flex:1;padding:13px;border-radius:12px;border:none;cursor:pointer;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .2s;text-decoration:none}
+.btn-amber{background:linear-gradient(135deg,var(--amber),var(--amber2));color:#0b0e17}
+.btn-ghost{background:rgba(255,255,255,.05);border:1px solid var(--border)!important;color:var(--muted2);border:none}
+.btn-started{background:linear-gradient(135deg,var(--green),#16a34a);color:#fff}
+
+/* COURSE CARDS */
+.course-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:12px;transition:all .2s}
+.course-card.active-card{border-color:rgba(245,158,11,.4)}
+.cc-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px}
+.cc-time{font-size:22px;font-weight:900;color:var(--amber);flex-shrink:0;line-height:1;margin-top:2px}
+.cc-title{font-size:15px;font-weight:800;color:#fff;margin-bottom:3px}
+.cc-pax  {font-size:12px;color:var(--muted2)}
+.status-badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;flex-shrink:0;margin-left:auto}
+.sb-wait  {background:rgba(245,158,11,.1);color:var(--amber)}
+.sb-go    {background:rgba(99,102,241,.1);color:#818cf8}
+.sb-done  {background:rgba(34,197,94,.1);color:var(--green)}
+.sb-cancel{background:rgba(239,68,68,.1);color:var(--red)}
+.cc-body{padding:14px 16px}
+.cc-row{display:flex;gap:8px;margin-bottom:8px;font-size:13px;align-items:flex-start}
+.cc-row svg{width:16px;height:16px;flex-shrink:0;margin-top:1px}
+.cc-row.from{color:#818cf8}
+.cc-row.to  {color:#4ade80}
+.cc-row.info{color:var(--muted2)}
+.cc-route{display:flex;align-items:center;gap:0;margin:12px 0;padding:12px;background:rgba(255,255,255,.03);border-radius:10px;border:1px solid var(--border)}
+.route-from{flex:1}
+.route-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.route-val  {font-size:13px;font-weight:700;color:#fff;line-height:1.3}
+.route-arrow{padding:0 12px;font-size:18px;color:var(--amber)}
+.route-dist{font-size:10px;color:var(--muted);text-align:center;margin-top:2px}
+.cc-actions{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border)}
+.cc-btn{flex:1;padding:10px;border-radius:9px;border:none;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;transition:all .2s}
+.cc-btn.nav   {background:rgba(245,158,11,.1);color:var(--amber)}
+.cc-btn.call  {background:rgba(99,102,241,.1);color:#818cf8}
+.cc-btn.start {background:rgba(34,197,94,.1);color:var(--green)}
+.cc-btn.done  {background:rgba(255,255,255,.05);color:var(--muted2)}
+.cc-btn.amber2{background:linear-gradient(135deg,var(--amber),var(--amber2));color:#0b0e17}
+
+/* FLIGHT INFO */
+.flight-box{background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.18);border-radius:10px;padding:12px 14px;margin:10px 0;display:flex;gap:10px;align-items:center}
+.flight-ico{font-size:22px}
+.flight-num{font-size:16px;font-weight:900;color:#818cf8}
+.flight-info{font-size:12px;color:var(--muted2)}
+.flight-status{margin-left:auto;text-align:right}
+.fs-time{font-size:18px;font-weight:800;color:#fff}
+.fs-label{font-size:10px;color:var(--muted)}
+
+/* ALERT */
+.alert{border-radius:12px;padding:13px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-start}
+.alert.warn{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18)}
+.alert.ok{background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.15)}
+.alert-icon{font-size:18px;flex-shrink:0}
+.alert-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.alert.warn .alert-title{color:#fbbf24}
+.alert.ok .alert-title{color:#4ade80}
+.alert-text{font-size:12px;color:var(--muted2);line-height:1.5}
+
+/* VEHICULE */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:12px}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.veh-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.veh-row:last-child{border-bottom:none}
+.veh-key{color:var(--muted)}
+.veh-val{color:#fff;font-weight:600;text-align:right}
+.progress-bar{height:5px;background:rgba(255,255,255,.07);border-radius:5px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--amber),var(--amber2))}
+
+/* RAPPORT */
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block}
+.form-input{width:100%;padding:11px 12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:14px;outline:none;transition:border-color .2s}
+.form-input:focus{border-color:rgba(245,158,11,.4)}
+textarea.form-input{resize:none}
+.btn-submit{width:100%;padding:13px;border-radius:10px;border:none;cursor:pointer;font-size:14px;font-weight:800;background:linear-gradient(135deg,var(--amber),var(--amber2));color:#0b0e17;display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* RIHLA premium burgundy + ivory theme */
+:root{--amber:#A8371D;--amber2:#C8472B;--bg:#F6EEE6;--bg2:#FFFFFF;--card:#FFFFFF;--border:#E7D9CF;--text:#201716;--muted:#7C6F69;--muted2:#514642}
+html,body{background:var(--bg)!important;color:var(--text)!important}
+.app-header,.tabs,.card,.kpi,.course-card,.form-input{background:#FFFFFF!important;border-color:#E7D9CF!important;box-shadow:0 10px 26px rgba(62,19,14,.09)}
+.app-header{border-top:4px solid #5B1914}
+.tabs{box-shadow:0 -10px 24px rgba(62,19,14,.10)}
+.driver-av,.btn-submit,.btn-amber,.cc-btn.amber2{background:linear-gradient(135deg,#7C241A,#A8371D)!important;color:#FFFFFF!important}
+.card-title,.course-title,.driver-name{color:#201716!important}
+.tab.active,.kpi-val{color:#A8371D!important}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="app-header">
+  <div class="header-row">
+    <div class="driver-info">
+      <div class="driver-av">K</div>
+      <div>
+        <div class="driver-name">Khalid Mansouri</div>
+        <div class="driver-role">Chauffeur DMC · Marrakech</div>
+      </div>
+    </div>
+    <div class="vehicle-pill">🚌 MB Sprinter 45</div>
+  </div>
+</div>
+
+<!-- PAGE: COURSES -->
+<div id="page-courses" class="page active screen">
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--amber)">3</div>
+      <div class="kpi-lbl">Courses</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:#818cf8">40</div>
+      <div class="kpi-lbl">Passagers</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--green)">1</div>
+      <div class="kpi-lbl">Terminée</div>
+    </div>
+  </div>
+
+  <!-- PROCHAINE COURSE -->
+  <div class="next-hero">
+    <div class="next-label"><div class="blink-dot"></div>Prochaine course</div>
+    <div class="next-time">13:00</div>
+    <div class="next-course">Transfert vers restaurant Dar Moha</div>
+    <div class="next-meta">
+      <b>24 pax</b> · Groupe Paris · Départ depuis Sofitel Marrakech<br/>
+      📍 Rue Dar el-Bacha, Médina · <b>~12 min</b> de trajet
+    </div>
+    <div class="next-actions">
+      <a class="btn-big btn-amber" href="https://maps.google.com" target="_blank">🗺️ Démarrer GPS</a>
+      <a class="btn-big btn-ghost" href="tel:+212661234567">📞 Guide</a>
+    </div>
+  </div>
+
+  <!-- COURSE 1 — Terminée -->
+  <div class="course-card">
+    <div class="cc-header">
+      <div class="cc-time" style="color:var(--green);text-decoration:line-through;opacity:.6">09:45</div>
+      <div>
+        <div class="cc-title">Aéroport → Sofitel Marrakech</div>
+        <div class="cc-pax">🇫🇷 Groupe Paris · 24 pax · Vol AT702</div>
+      </div>
+      <span class="status-badge sb-done">✓ Terminé</span>
+    </div>
+    <div class="cc-body">
+      <div class="cc-route">
+        <div class="route-from">
+          <div class="route-label">Départ</div>
+          <div class="route-val">✈️ Aéroport RAK<br/><span style="font-size:11px;color:var(--muted)">Terminal Arrivées</span></div>
+        </div>
+        <div>
+          <div class="route-arrow">→</div>
+          <div class="route-dist">18 km · 25 min</div>
+        </div>
+        <div class="route-from" style="text-align:right">
+          <div class="route-label" style="text-align:right">Arrivée</div>
+          <div class="route-val">🏨 Sofitel Marrakech<br/><span style="font-size:11px;color:var(--muted)">1 Rue Harroun</span></div>
+        </div>
+      </div>
+      <div class="cc-row info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+        Déposé à 10:40 · Course terminée normalement
+      </div>
+    </div>
+  </div>
+
+  <!-- COURSE 2 — Prochaine (active) -->
+  <div class="course-card active-card">
+    <div class="cc-header">
+      <div class="cc-time">13:00</div>
+      <div>
+        <div class="cc-title">Sofitel → Restaurant Dar Moha</div>
+        <div class="cc-pax">🇫🇷 Groupe Paris · 24 pax · Déjeuner</div>
+      </div>
+      <span class="status-badge sb-wait">Prochain</span>
+    </div>
+    <div class="cc-body">
+      <div class="cc-route">
+        <div class="route-from">
+          <div class="route-label">Départ</div>
+          <div class="route-val">🏨 Sofitel Marrakech</div>
+        </div>
+        <div>
+          <div class="route-arrow">→</div>
+          <div class="route-dist">4 km · 12 min</div>
+        </div>
+        <div class="route-from" style="text-align:right">
+          <div class="route-label" style="text-align:right">Arrivée</div>
+          <div class="route-val">🍽️ Dar Moha</div>
+        </div>
+      </div>
+      <div class="cc-row info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        Contact guide Hassan : +212 661 234 567
+      </div>
+      <div class="cc-row info" style="color:#fbbf24">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>
+        Allergie noix — Mme Dubois (chambre 412). Informer le restaurant.
+      </div>
+    </div>
+    <div class="cc-actions">
+      <a class="cc-btn nav" href="https://maps.google.com/?q=Dar+Moha+Marrakech" target="_blank">🗺️ GPS</a>
+      <a class="cc-btn call" href="tel:+212661234567">📞 Guide</a>
+      <button class="cc-btn amber2" onclick="startCourse(this)">▶ Démarrer</button>
+    </div>
+  </div>
+
+  <!-- COURSE 3 — En attente -->
+  <div class="course-card">
+    <div class="cc-header">
+      <div class="cc-time">20:00</div>
+      <div>
+        <div class="cc-title">Sofitel → Chez Ali Fantasia</div>
+        <div class="cc-pax">🇫🇷 Groupe Paris · 24 pax · Dîner + Spectacle</div>
+      </div>
+      <span class="status-badge sb-wait">Soir</span>
+    </div>
+    <div class="cc-body">
+      <div class="cc-route">
+        <div class="route-from">
+          <div class="route-label">Départ</div>
+          <div class="route-val">🏨 Sofitel Marrakech</div>
+        </div>
+        <div>
+          <div class="route-arrow">→</div>
+          <div class="route-dist">8 km · 20 min</div>
+        </div>
+        <div class="route-from" style="text-align:right">
+          <div class="route-label" style="text-align:right">Arrivée</div>
+          <div class="route-val">🎭 Chez Ali</div>
+        </div>
+      </div>
+      <div class="cc-row info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        Retour prévu 23:00 · Prise en charge devant l'entrée principale
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- PAGE: VOL -->
+<div id="page-flight" class="page screen">
+  <div class="card">
+    <div class="card-title"><span>✈️</span>Vols du jour — Prise en charge aéroport</div>
+
+    <div class="alert ok">
+      <div class="alert-icon">✓</div>
+      <div>
+        <div class="alert-title">Vol AT702 Paris → Marrakech — Atterri</div>
+        <div class="alert-text">Atterri 09:15 · Groupe récupéré · Course terminée</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--muted2);margin-bottom:10px">Prochain vol à surveiller :</div>
+      <div class="flight-box">
+        <div class="flight-ico">✈️</div>
+        <div>
+          <div class="flight-num">AT703 · Demain</div>
+          <div class="flight-info">CDG Paris · Départ 12:30 local · Arrivée 14:45</div>
+        </div>
+        <div class="flight-status">
+          <div class="fs-time">14:45</div>
+          <div class="fs-label">Arrivée prévue</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">📋 Prise en charge 24 pax · Groupe circuit retour · Transfert vers aéroport départ</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>📋</span>Instructions prise en charge</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(245,158,11,.15);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--amber);flex-shrink:0">1</div>
+        <div style="color:var(--muted2)">Se positionner <b style="color:#fff">zone arrivées internationale</b>, côté droit en sortie</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(245,158,11,.15);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--amber);flex-shrink:0">2</div>
+        <div style="color:var(--muted2)">Tenir le <b style="color:#fff">panneau S'TOURS + Nom groupe</b> visible</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(245,158,11,.15);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--amber);flex-shrink:0">3</div>
+        <div style="color:var(--muted2)">Aider avec les bagages · <b style="color:#fff">Eau fraîche offerte</b> dans le bus</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px">
+        <div style="width:22px;height:22px;border-radius:50%;background:rgba(245,158,11,.15);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--amber);flex-shrink:0">4</div>
+        <div style="color:var(--muted2)">Appeler le guide si retard > <b style="color:#fff">15 minutes</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: VEHICULE -->
+<div id="page-vehicle" class="page screen">
+  <div class="card">
+    <div class="card-title"><span>🚌</span>Mon véhicule</div>
+    <div style="text-align:center;font-size:52px;margin:16px 0">🚌</div>
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:20px;font-weight:900;color:#fff">Mercedes Sprinter</div>
+      <div style="font-size:14px;color:var(--muted2);margin-top:4px">45 places · Climatisé · WiFi · Marrakech 1</div>
+      <div style="font-size:13px;color:var(--amber);margin-top:4px;font-weight:700">Immatriculation : A-45678-28</div>
+    </div>
+    <div class="veh-row">
+      <span class="veh-key">Kilométrage</span>
+      <span class="veh-val">148 234 km</span>
+    </div>
+    <div class="veh-row">
+      <span class="veh-key">Carburant</span>
+      <span class="veh-val" style="color:var(--green)">78% ⛽</span>
+    </div>
+    <div class="veh-row">
+      <span class="veh-key">Prochain contrôle</span>
+      <span class="veh-val">15 Mai 2026</span>
+    </div>
+    <div class="veh-row">
+      <span class="veh-key">Assurance</span>
+      <span class="veh-val" style="color:var(--green)">Valide — 31 Déc 2026</span>
+    </div>
+    <div class="veh-row">
+      <span class="veh-key">Vignette</span>
+      <span class="veh-val" style="color:var(--green)">2026 ✓</span>
+    </div>
+    <div style="margin-top:12px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:5px">Niveau carburant</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:78%"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>🔧</span>Signaler un problème</div>
+    <div class="form-group">
+      <label class="form-label">Type de problème</label>
+      <select class="form-input" id="problemType">
+        <option>Pneu crevé</option>
+        <option>Panne mécanique</option>
+        <option>Carburant insuffisant</option>
+        <option>Climatisation défectueuse</option>
+        <option>Accident / Incident</option>
+        <option>Autre</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea class="form-input" id="problemDesc" rows="3" placeholder="Décrivez le problème, votre position GPS actuelle..."></textarea>
+    </div>
+    <button class="btn-submit" onclick="submitProblem()">🚨 Alerter le bureau</button>
+  </div>
+</div>
+
+<!-- PAGE: RAPPORT -->
+<div id="page-report" class="page screen">
+  <div class="card">
+    <div class="card-title"><span>📊</span>Rapport de fin de journée</div>
+    <div class="form-group">
+      <label class="form-label">Kilométrage fin de journée</label>
+      <input type="number" class="form-input" placeholder="Ex: 148 312" id="kmFin"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Carburant ajouté (litres)</label>
+      <input type="number" class="form-input" placeholder="Ex: 0" id="carburant"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Péages / parking (MAD)</label>
+      <input type="number" class="form-input" placeholder="Ex: 45" id="frais"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Commentaires / incidents</label>
+      <textarea class="form-input" rows="4" id="commentaire" placeholder="Tout s'est bien passé. Groupe sympathique. Aucun incident particulier..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Satisfaction client (estimée)</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="cc-btn" style="background:rgba(239,68,68,.1);color:var(--red);flex:1;padding:10px;border-radius:9px;border:none;cursor:pointer;font-size:16px" onclick="selectRating(this,'1')">😞</button>
+        <button class="cc-btn" style="background:rgba(245,158,11,.1);color:var(--amber);flex:1;padding:10px;border-radius:9px;border:none;cursor:pointer;font-size:16px" onclick="selectRating(this,'2')">😐</button>
+        <button class="cc-btn" style="background:rgba(34,197,94,.1);color:var(--green);flex:1;padding:10px;border-radius:9px;border:none;cursor:pointer;font-size:16px" onclick="selectRating(this,'3')">😊</button>
+        <button class="cc-btn" style="background:rgba(34,197,94,.15);color:var(--green);flex:1;padding:10px;border-radius:9px;border:none;cursor:pointer;font-size:16px" onclick="selectRating(this,'4')">🌟</button>
+      </div>
+    </div>
+    <button class="btn-submit" onclick="submitReport()">📨 Envoyer le rapport</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<nav class="tabs">
+  <button class="tab active" onclick="switchPage('courses',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><circle cx="12" cy="21" r="1"/><circle cx="20" cy="21" r="1"/></svg>
+    Courses
+  </button>
+  <button class="tab" onclick="switchPage('flight',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 01.01 1.18 2 2 0 012 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14v2.92z"/></svg>
+    Vols
+  </button>
+  <button class="tab" onclick="switchPage('vehicle',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+    Véhicule
+  </button>
+  <button class="tab" onclick="switchPage('report',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    Rapport
+  </button>
+</nav>
+
+<script>
+function switchPage(id, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
+  document.getElementById('page-'+id).classList.add('active')
+  btn.classList.add('active')
+  window.scrollTo({top:0,behavior:'smooth'})
+}
+function startCourse(btn){
+  const badge=btn.closest('.course-card').querySelector('.status-badge')
+  badge.textContent='▶ En cours'
+  badge.className='status-badge sb-go'
+  btn.textContent='✓ Terminé'
+  btn.className='cc-btn done'
+  btn.onclick=function(){
+    badge.textContent='✓ Terminé'
+    badge.className='status-badge sb-done'
+    this.style.display='none'
+    alert('✅ Course marquée comme terminée et envoyée à l\'opérateur.')
+  }
+}
+function selectRating(el, val){
+  el.parentElement.querySelectorAll('button').forEach(b=>b.style.transform='scale(1)')
+  el.style.transform='scale(1.15)'
+}
+function submitReport(){
+  const km=document.getElementById('kmFin').value
+  if(!km){alert('Veuillez saisir le kilométrage.');return}
+  alert('✅ Rapport de fin de journée envoyé à S\'TOURS.\nMerci Khalid, bonne nuit !')
+}
+function submitProblem(){
+  const desc=document.getElementById('problemDesc').value
+  const type=document.getElementById('problemType').value
+  if(!desc.trim()){alert('Veuillez décrire le problème.');return}
+  alert('🚨 Alerte envoyée !\nType: '+type+'\n\nUn responsable S\'TOURS vous rappelle dans 5 minutes.')
+  document.getElementById('problemDesc').value=''
+}
+</script>
+</body>
+</html>

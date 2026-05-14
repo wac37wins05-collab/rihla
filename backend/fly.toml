@@ -1,0 +1,39 @@
+# fly.toml — STOURS / Rihla Backend API
+# App: stours-api  |  Region: cdg (Paris)
+
+app = "stours-api"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT        = "8000"
+  WORKERS     = "2"
+  ENVIRONMENT = "production"
+
+[http_service]
+  internal_port       = 8000
+  force_https         = true
+  auto_stop_machines  = true
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type       = "connections"
+    hard_limit = 200
+    soft_limit = 150
+
+[[vm]]
+  size   = "shared-cpu-1x"
+  memory = "512mb"
+
+[checks]
+  [checks.health]
+    grace_period = "10s"
+    interval     = "15s"
+    method       = "GET"
+    path         = "/health"
+    port         = 8000
+    timeout      = "5s"
+    type         = "http"

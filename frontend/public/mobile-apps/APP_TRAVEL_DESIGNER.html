@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#F6EEE6"/>
+<title>RIHLA Travel Designer</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --teal:#14b8a6;--teal2:#2dd4bf;--teal3:rgba(20,184,166,.12);
+  --violet:#8b5cf6;--violet2:#a78bfa;
+  --bg:#0b0e17;--bg2:#111520;--card:#1a2035;--card2:#1e2640;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#f1f5f9;--muted:#64748b;--muted2:#94a3b8;
+  --green:#22c55e;--orange:#f59e0b;--red:#ef4444;--blue:#3b82f6;
+  --safe:env(safe-area-inset-bottom,16px);
+}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh;max-width:430px;margin:0 auto;padding-bottom:calc(72px + var(--safe));overflow-x:hidden}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes shimmer{0%{background-position:-200px 0}100%{background-position:calc(200px + 100%) 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slideIn{from{transform:translateX(100%)}to{transform:none}}
+
+.page{display:none}
+.page.active{display:block;animation:fadeUp .22s ease}
+
+/* ── HEADER ─────────────────────────────────────── */
+.app-header{background:rgba(11,14,23,.94);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);position:sticky;top:0;z-index:50;padding:14px 16px 11px;border-bottom:1px solid var(--border)}
+.header-row{display:flex;align-items:center;justify-content:space-between}
+.user-info{display:flex;align-items:center;gap:10px}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--violet));display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff;flex-shrink:0}
+.user-name{font-size:15px;font-weight:800;color:#fff}
+.user-role{font-size:11px;color:var(--teal);font-weight:600}
+.header-actions{display:flex;gap:8px;align-items:center}
+.icon-btn{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted2)}
+.icon-btn svg{width:18px;height:18px;stroke-width:1.8}
+.notif-dot{position:relative}
+.notif-dot::after{content:'3';position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:8px;font-weight:900;width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;line-height:14px;text-align:center}
+
+/* ── TABS ────────────────────────────────────────── */
+.tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(17,21,32,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:8px 0 calc(8px + var(--safe));z-index:100}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;cursor:pointer;border:none;background:none;color:var(--muted);font-size:10px;font-weight:600;transition:color .18s;position:relative}
+.tab svg{width:21px;height:21px;stroke-width:1.8}
+.tab.active{color:var(--teal2)}
+.tab-badge{position:absolute;top:3px;right:calc(50% - 16px);width:15px;height:15px;border-radius:50%;background:var(--red);font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;color:#fff}
+
+/* ── SCREEN ─────────────────────────────────────── */
+.screen{padding:14px 14px 0}
+
+/* ── KPI ROW ─────────────────────────────────────── */
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px 10px;text-align:center}
+.kpi-val{font-size:24px;font-weight:900;line-height:1;color:var(--text)}
+.kpi-val.teal{color:var(--teal2)}
+.kpi-val.orange{color:var(--orange)}
+.kpi-val.green{color:var(--green)}
+.kpi-lbl{font-size:9.5px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px;line-height:1.3}
+
+/* ── CARDS ───────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.card-title{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.card-title svg{width:14px;height:14px}
+
+/* ── DOSSIER CARDS ───────────────────────────────── */
+.dossier-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:0;margin-bottom:10px;overflow:hidden;cursor:pointer;transition:border-color .2s}
+.dossier-card:active{border-color:var(--teal)}
+.dossier-accent{height:3px}
+.dossier-body{padding:14px}
+.dossier-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.dossier-flag{font-size:22px;line-height:1}
+.dossier-info{flex:1;padding:0 10px}
+.dossier-name{font-size:14px;font-weight:800;color:#fff;margin-bottom:2px}
+.dossier-sub{font-size:11px;color:var(--muted2)}
+.status-badge{padding:4px 10px;border-radius:20px;font-size:10.5px;font-weight:700;letter-spacing:.3px}
+.badge-design{background:rgba(20,184,166,.12);color:var(--teal2);border:1px solid rgba(20,184,166,.25)}
+.badge-devis{background:rgba(245,158,11,.1);color:var(--orange);border:1px solid rgba(245,158,11,.25)}
+.badge-confirme{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.badge-urgent{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.badge-attente{background:rgba(148,163,184,.1);color:var(--muted2);border:1px solid rgba(148,163,184,.2)}
+.dossier-meta{display:flex;gap:12px;flex-wrap:wrap}
+.meta-chip{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted2)}
+.meta-chip svg{width:12px;height:12px;opacity:.7}
+.dossier-progress{margin-top:12px}
+.prog-label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:5px}
+.prog-bar{height:4px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--teal),var(--teal2));transition:width .5s ease}
+.prog-fill.orange{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.prog-fill.green{background:linear-gradient(90deg,#16a34a,#22c55e)}
+
+/* ── FAB ────────────────────────────────────────── */
+.fab{position:fixed;bottom:calc(80px + var(--safe));right:18px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--violet));box-shadow:0 4px 20px rgba(20,184,166,.35);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;z-index:90;transition:transform .15s}
+.fab:active{transform:scale(.92)}
+.fab svg{width:24px;height:24px;color:#fff;stroke-width:2.5}
+
+/* ── ITINÉRAIRE BUILDER ─────────────────────────── */
+.day-tab-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none;margin-bottom:14px}
+.day-tab-row::-webkit-scrollbar{display:none}
+.day-chip{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--card);color:var(--muted2);transition:all .18s}
+.day-chip.active{background:var(--teal3);border-color:var(--teal);color:var(--teal2)}
+.day-builder{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px}
+.day-title{font-size:15px;font-weight:800;color:#fff;margin-bottom:4px}
+.day-sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+.timeline-item{display:flex;gap:12px;padding-bottom:16px;position:relative}
+.timeline-item:not(:last-child)::before{content:'';position:absolute;left:17px;top:36px;width:2px;height:calc(100% - 24px);background:var(--border)}
+.tl-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
+.tl-content{flex:1;padding-top:6px}
+.tl-time{font-size:10.5px;color:var(--muted);font-weight:600;margin-bottom:2px}
+.tl-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:2px}
+.tl-detail{font-size:11.5px;color:var(--muted2)}
+.tl-cost{font-size:11px;font-weight:700;color:var(--teal2);margin-top:3px}
+.add-step-btn{width:100%;padding:11px;border:1.5px dashed rgba(20,184,166,.3);border-radius:10px;background:rgba(20,184,166,.04);color:var(--teal);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .18s;margin-top:4px}
+.add-step-btn:active{background:rgba(20,184,166,.1)}
+.add-step-btn svg{width:16px;height:16px}
+.circuit-card{background:linear-gradient(180deg,#fff,#FFF7EE);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 14px 34px rgba(62,19,14,.10)}
+.circuit-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+.circuit-kicker{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--teal);margin-bottom:4px}
+.circuit-title{font-size:18px;font-weight:900;color:#201716;line-height:1.15}
+.circuit-status{padding:5px 9px;border-radius:999px;background:#F6EEE6;color:#7C241A;border:1px solid #E7D9CF;font-size:10.5px;font-weight:800;white-space:nowrap}
+.circuit-desc{font-size:12.5px;line-height:1.55;color:#5F5652;margin-bottom:12px}
+.circuit-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.circuit-field{background:#fff;border:1px solid #E7D9CF;border-radius:12px;padding:9px 10px}
+.circuit-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:#7C6F69;font-weight:800;margin-bottom:3px}
+.circuit-value{font-size:12.5px;color:#201716;font-weight:800}
+.circuit-block{background:#fff;border:1px solid #E7D9CF;border-radius:14px;padding:12px;margin-bottom:10px}
+.circuit-block-title{font-size:12px;font-weight:900;color:#5B1914;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.hotel-row,.guide-row,.quote-mini-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:#514642;margin-bottom:6px}
+.hotel-row b,.guide-row b{color:#201716}
+.included-pill{background:#EAF8EF;color:#178447;border:1px solid #BCE8C9;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:900;white-space:nowrap}
+.circuit-days{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.circuit-day{min-width:112px;background:#FFF7EE;border:1px solid #E7D9CF;border-radius:12px;padding:9px}
+.circuit-day b{display:block;color:#5B1914;font-size:11px;margin-bottom:3px}
+.circuit-day span{display:block;color:#5F5652;font-size:10.5px;line-height:1.35}
+.quote-mini{background:#5B1914;color:#fff;border-radius:14px;padding:12px;margin-top:10px}
+.quote-mini-row{color:#F6EEE6;margin-bottom:4px}
+.quote-mini-row strong{color:#fff}
+.quote-mini-total{display:flex;justify-content:space-between;align-items:end;border-top:1px solid rgba(255,255,255,.18);padding-top:8px;margin-top:8px}
+.quote-mini-total span{font-size:11px;color:#FFD8C8}.quote-mini-total b{font-size:18px;color:#fff}
+.circuit-actions{display:flex;gap:8px;margin-top:12px}
+.circuit-actions .btn{flex:1}
+
+/* ── SEARCH ─────────────────────────────────────── */
+.search-wrap{position:relative;margin-bottom:12px}
+.search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted);stroke-width:2}
+.search-input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 12px 11px 36px;color:var(--text);font-size:13px;outline:none;transition:border-color .18s}
+.search-input:focus{border-color:var(--teal)}
+.search-input::placeholder{color:var(--muted)}
+
+/* ── FILTER PILLS ───────────────────────────────── */
+.filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;scrollbar-width:none}
+.filter-row::-webkit-scrollbar{display:none}
+.filter-pill{flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:11.5px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--card);color:var(--muted2);transition:all .18s}
+.filter-pill.active{background:var(--teal3);border-color:var(--teal);color:var(--teal2)}
+
+/* ── SUPPLIER CARDS ─────────────────────────────── */
+.supplier-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:border-color .18s}
+.supplier-card:active{border-color:var(--teal)}
+.supp-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.supp-body{flex:1}
+.supp-name{font-size:13.5px;font-weight:800;color:#fff;margin-bottom:2px}
+.supp-type{font-size:11px;color:var(--muted2);margin-bottom:6px}
+.supp-tags{display:flex;gap:5px;flex-wrap:wrap}
+.supp-tag{padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(255,255,255,.06);color:var(--muted2)}
+.supp-price{font-size:13px;font-weight:800;color:var(--teal2);text-align:right;white-space:nowrap}
+.supp-stars{font-size:10px;color:var(--orange);margin-bottom:2px}
+.add-supp-btn{width:28px;height:28px;border-radius:8px;background:var(--teal3);border:1px solid rgba(20,184,166,.3);color:var(--teal2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:18px;font-weight:900;transition:background .18s;align-self:center}
+.add-supp-btn:active{background:rgba(20,184,166,.25)}
+
+/* ── DEVIS / QUOTE ──────────────────────────────── */
+.quote-section{margin-bottom:14px}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.quote-line{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.ql-icon{font-size:18px;width:32px;text-align:center}
+.ql-info{flex:1}
+.ql-name{font-size:13px;font-weight:700;color:#fff}
+.ql-detail{font-size:11px;color:var(--muted2);margin-top:1px}
+.ql-price{font-size:13px;font-weight:800;color:var(--teal2);white-space:nowrap}
+.quote-total-card{background:linear-gradient(135deg,rgba(20,184,166,.12),rgba(139,92,246,.08));border:1px solid rgba(20,184,166,.25);border-radius:14px;padding:16px;margin-bottom:12px}
+.total-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0}
+.total-row + .total-row{border-top:1px solid rgba(255,255,255,.05)}
+.total-label{font-size:12px;color:var(--muted2)}
+.total-val{font-size:14px;font-weight:800;color:#fff}
+.total-label.bold{color:var(--text);font-weight:700;font-size:13px}
+.total-val.big{font-size:20px;color:var(--teal2)}
+.total-val.green{color:var(--green)}
+.margin-gauge{margin-top:12px}
+.margin-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px}
+.margin-bar{height:8px;background:rgba(255,255,255,.07);border-radius:6px;overflow:hidden}
+.margin-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--teal),#22c55e);transition:width .6s ease}
+.devis-actions{display:flex;gap:8px}
+.btn{padding:11px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:opacity .18s;display:flex;align-items:center;gap:6px;justify-content:center}
+.btn:active{opacity:.8}
+.btn svg{width:15px;height:15px;stroke-width:2.5}
+.btn-primary{background:linear-gradient(135deg,var(--teal),var(--violet));color:#fff;flex:1}
+.btn-secondary{background:rgba(255,255,255,.06);color:var(--muted2);border:1px solid var(--border)}
+.btn-outline{background:transparent;color:var(--teal);border:1.5px solid rgba(20,184,166,.4)}
+
+/* ── MESSAGES ───────────────────────────────────── */
+.msg-thread{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px}
+.msg-header{padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);cursor:pointer}
+.msg-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff;flex-shrink:0}
+.msg-info{flex:1}
+.msg-contact{font-size:13px;font-weight:700;color:#fff}
+.msg-preview{font-size:11.5px;color:var(--muted2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.msg-meta{text-align:right}
+.msg-time{font-size:10.5px;color:var(--muted)}
+.msg-unread{margin-top:3px;width:18px;height:18px;border-radius:50%;background:var(--teal);color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;margin-left:auto}
+.chat-view{display:none;position:fixed;inset:0;background:var(--bg);z-index:200;max-width:430px;left:50%;transform:translateX(-50%)}
+.chat-view.open{display:flex;flex-direction:column;animation:slideIn .22s ease}
+.chat-nav{background:rgba(11,14,23,.96);backdrop-filter:blur(16px);padding:14px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.chat-back{background:none;border:none;color:var(--teal2);cursor:pointer;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:700}
+.chat-back svg{width:18px;height:18px}
+.chat-contact{flex:1;font-size:14px;font-weight:800;color:#fff}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.bubble{max-width:80%;padding:10px 13px;border-radius:14px;font-size:13px;line-height:1.5}
+.bubble.in{background:var(--card);color:var(--text);border-radius:4px 14px 14px 14px;align-self:flex-start}
+.bubble.out{background:linear-gradient(135deg,var(--teal),#0d9488);color:#fff;border-radius:14px 4px 14px 14px;align-self:flex-end}
+.bubble-time{font-size:10px;opacity:.55;margin-top:4px;display:block}
+.chat-input-row{padding:12px 14px calc(12px + var(--safe));border-top:1px solid var(--border);background:var(--bg2);display:flex;gap:8px}
+.chat-input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:22px;padding:10px 14px;color:var(--text);font-size:13px;outline:none}
+.send-btn{width:40px;height:40px;border-radius:50%;background:var(--teal);border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.send-btn svg{width:18px;height:18px;stroke-width:2.5}
+
+/* ── BOTTOM SHEET ───────────────────────────────── */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:180;display:none;backdrop-filter:blur(4px)}
+.sheet-overlay.open{display:block}
+.bottom-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--bg2);border-radius:20px 20px 0 0;border-top:1px solid var(--border);z-index:190;padding:20px 16px calc(20px + var(--safe));display:none;max-height:75vh;overflow-y:auto}
+.bottom-sheet.open{display:block;animation:fadeUp .22s ease}
+.sheet-handle{width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin:0 auto 16px}
+.sheet-title{font-size:16px;font-weight:800;color:#fff;margin-bottom:16px}
+.form-group{margin-bottom:12px}
+.form-label{font-size:11.5px;font-weight:700;color:var(--muted2);margin-bottom:6px;display:block}
+.form-input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 13px;color:var(--text);font-size:13px;outline:none;transition:border-color .18s}
+.form-input:focus{border-color:var(--teal)}
+.form-input::placeholder{color:var(--muted)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.form-select{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 13px;color:var(--text);font-size:13px;outline:none;appearance:none}
+.step-type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:14px}
+.step-type-btn{padding:8px 4px;border-radius:10px;background:var(--card);border:1.5px solid var(--border);color:var(--muted2);font-size:10px;font-weight:700;cursor:pointer;text-align:center;transition:all .18s}
+.step-type-btn .emoji{font-size:20px;display:block;margin-bottom:3px}
+.step-type-btn.sel{background:var(--teal3);border-color:var(--teal);color:var(--teal2)}
+
+/* ── TOAST ──────────────────────────────────────── */
+.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:300;opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1}
+
+/* ── EMPTY STATE ─────────────────────────────────── */
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:10px}
+.empty-text{font-size:14px;font-weight:600}
+
+/* RIHLA premium burgundy + ivory theme */
+:root{
+  --teal:#A8371D;--teal2:#A8371D;--teal3:#FFF7EE;--violet:#1628A9;--violet2:#3646C6;
+  --bg:#F6EEE6;--bg2:#FFFFFF;--card:#FFFFFF;--card2:#FFF7EE;
+  --border:#E7D9CF;--border2:#D8C3B7;--text:#201716;--muted:#7C6F69;--muted2:#514642;
+}
+html,body{background:var(--bg)!important;color:var(--text)!important}
+.app-header,.tabs,.card,.kpi,.dossier-card,.day-builder,.msg-thread,.search-input,.day-chip,.form-input,.form-select,.step-type-btn{background:#FFFFFF!important;border-color:#E7D9CF!important;box-shadow:0 10px 26px rgba(62,19,14,.09)}
+.app-header{border-top:4px solid #5B1914}
+.tabs{box-shadow:0 -10px 24px rgba(62,19,14,.10)}
+.avatar,.fab,.btn-primary{background:linear-gradient(135deg,#7C241A,#A8371D)!important;color:#FFFFFF!important}
+.user-name,.card-title,.dossier-title,.day-title,.service-name,.quote-title,.msg-name{color:#201716!important}
+.user-role,.tab.active,.kpi-val,.day-chip.active{color:#A8371D!important}
+.search-input,.form-input,.form-select,textarea,select{color:#201716!important;background:#FFFFFF!important}
+.prog-bar{background:#E7D9CF!important}
+.toast{background:#5B1914!important;color:#FFFFFF!important}
+.day-title,.tl-name,.ql-name,.supp-name,.msg-contact,.total-val{color:#201716!important}
+.btn-secondary{background:#FFF7EE!important;color:#5B1914!important;border-color:#E7D9CF!important}
+.quote-total-card{background:#FFF7EE!important;border-color:#E7D9CF!important}
+.total-row + .total-row{border-top-color:#E7D9CF!important}
+.total-val.big{color:#5B1914!important}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="header-row">
+    <div class="user-info">
+      <div class="avatar">SA</div>
+      <div>
+        <div class="user-name">Sara Alaoui</div>
+        <div class="user-role">Travel Designer · S'TOURS</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn notif-dot" onclick="showToast('3 nouvelles notifications')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+      <button class="icon-btn" onclick="showToast('Synchronisation en cours…')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ══ PAGE 1 — DOSSIERS ══════════════════════════ -->
+<div class="page active" id="p-dossiers">
+  <div class="screen">
+
+    <!-- KPIs -->
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-val teal">8</div>
+        <div class="kpi-lbl">Dossiers actifs</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val orange">3</div>
+        <div class="kpi-lbl">Devis en attente</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val green">142K</div>
+        <div class="kpi-lbl">CA confirmé €</div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="search-input" type="search" placeholder="Chercher un dossier, client…"/>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-row">
+      <div class="filter-pill active" onclick="filterDoss(this,'all')">Tous</div>
+      <div class="filter-pill" onclick="filterDoss(this,'design')">En conception</div>
+      <div class="filter-pill" onclick="filterDoss(this,'devis')">Devis envoyé</div>
+      <div class="filter-pill" onclick="filterDoss(this,'confirme')">Confirmés</div>
+    </div>
+
+    <!-- Dossier Cards -->
+    <div id="dossier-list">
+
+      <div class="dossier-card" data-cat="design" onclick="openDossier('Groupe Paris — 22 pax')">
+        <div class="dossier-accent" style="background:linear-gradient(90deg,#14b8a6,#8b5cf6)"></div>
+        <div class="dossier-body">
+          <div class="dossier-top">
+            <div class="dossier-flag">🇫🇷</div>
+            <div class="dossier-info">
+              <div class="dossier-name">Groupe Paris — 22 pax</div>
+              <div class="dossier-sub">Incentive Luxe · 8 jours · Mai 2026</div>
+            </div>
+            <div class="status-badge badge-design">Conception</div>
+          </div>
+          <div class="dossier-meta">
+            <div class="meta-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              12–19 mai 2026
+            </div>
+            <div class="meta-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Budget: 48 500 €
+            </div>
+          </div>
+          <div class="dossier-progress">
+            <div class="prog-label"><span>Itinéraire</span><span>65%</span></div>
+            <div class="prog-bar"><div class="prog-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dossier-card" data-cat="devis" onclick="openDossier('Mariage Berlin — 35 pax')">
+        <div class="dossier-accent" style="background:linear-gradient(90deg,#f59e0b,#ef4444)"></div>
+        <div class="dossier-body">
+          <div class="dossier-top">
+            <div class="dossier-flag">🇩🇪</div>
+            <div class="dossier-info">
+              <div class="dossier-name">Mariage Berlin — 35 pax</div>
+              <div class="dossier-sub">Riad Exclusif · 5 jours · Juin 2026</div>
+            </div>
+            <div class="status-badge badge-devis">Devis envoyé</div>
+          </div>
+          <div class="dossier-meta">
+            <div class="meta-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              3–7 juin 2026
+            </div>
+            <div class="meta-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Budget: 72 000 €
+            </div>
+          </div>
+          <div class="dossier-progress">
+            <div class="prog-label"><span>Devis</span><span>90%</span></div>
+            <div class="prog-bar"><div class="prog-fill orange" style="width:90%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dossier-card" data-cat="confirme" onclick="openDossier('Circuit Dubai Gold — 18 pax')">
+        <div class="dossier-accent" style="background:linear-gradient(90deg,#22c55e,#14b8a6)"></div>
+        <div class="dossier-body">
+          <div class="dossier-top">
+            <div class="dossier-flag">🇦🇪</div>
+            <div class="dossier-info">
+              <div class="dossier-name">Circuit Dubai Gold — 18 pax</div>
+              <div class="dossier-sub">Désert & Culture · 7 jours · Juil. 2026</div>
+            </div>
+            <div class="status-badge badge-confirme">Confirmé ✓</div>
+          </div>
+          <div class="dossier-meta">
+            <div class="meta-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              10–16 juil. 2026
+            </div>
+            <div class="meta-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Budget: 38 900 €
+            </div>
+          </div>
+          <div class="dossier-progress">
+            <div class="prog-label"><span>Préparation</span><span>100%</span></div>
+            <div class="prog-bar"><div class="prog-fill green" style="width:100%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dossier-card" data-cat="design" onclick="openDossier('Découverte Madrid — 12 pax')">
+        <div class="dossier-accent" style="background:linear-gradient(90deg,#6366f1,#3b82f6)"></div>
+        <div class="dossier-body">
+          <div class="dossier-top">
+            <div class="dossier-flag">🇪🇸</div>
+            <div class="dossier-info">
+              <div class="dossier-name">Découverte Madrid — 12 pax</div>
+              <div class="dossier-sub">Gastronomie & Arts · 6 jours · Août 2026</div>
+            </div>
+            <div class="status-badge badge-urgent">Urgent</div>
+          </div>
+          <div class="dossier-meta">
+            <div class="meta-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              20–25 août 2026
+            </div>
+            <div class="meta-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Budget: 22 400 €
+            </div>
+          </div>
+          <div class="dossier-progress">
+            <div class="prog-label"><span>Itinéraire</span><span>30%</span></div>
+            <div class="prog-bar"><div class="prog-fill orange" style="width:30%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dossier-card" data-cat="confirme" onclick="openDossier('Incentive Casablanca Corp — 60 pax')">
+        <div class="dossier-accent" style="background:linear-gradient(90deg,#22c55e,#16a34a)"></div>
+        <div class="dossier-body">
+          <div class="dossier-top">
+            <div class="dossier-flag">🇲🇦</div>
+            <div class="dossier-info">
+              <div class="dossier-name">Incentive Casablanca Corp — 60 pax</div>
+              <div class="dossier-sub">Team Building · 4 jours · Sept. 2026</div>
+            </div>
+            <div class="status-badge badge-confirme">Confirmé ✓</div>
+          </div>
+          <div class="dossier-meta">
+            <div class="meta-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              5–8 sept. 2026
+            </div>
+            <div class="meta-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Budget: 96 000 €
+            </div>
+          </div>
+          <div class="dossier-progress">
+            <div class="prog-label"><span>Opérations</span><span>80%</span></div>
+            <div class="prog-bar"><div class="prog-fill green" style="width:80%"></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- FAB (visible on dossiers & itinerary tabs) -->
+<button class="fab" id="main-fab" onclick="openSheet('sheet-new-dossier')">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+<!-- ══ PAGE 2 — ITINÉRAIRE ════════════════════════ -->
+<div class="page" id="p-itineraire">
+  <div class="screen">
+
+    <!-- Sélecteur de dossier -->
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:14px;font-weight:800;color:var(--text)">🇫🇷 Groupe Paris — 22 pax</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:2px">Incentive Luxe · 8 jours · 12–19 mai 2026</div>
+        </div>
+        <button class="btn btn-secondary" style="padding:6px 10px;font-size:11px" onclick="showToast('Changer de dossier')">Changer</button>
+      </div>
+    </div>
+
+    <div class="circuit-card">
+      <div class="circuit-head">
+        <div>
+          <div class="circuit-kicker">Proposition de circuit</div>
+          <div class="circuit-title">Marrakech Prestige & Désert Agafay</div>
+        </div>
+        <div class="circuit-status">Brouillon prêt</div>
+      </div>
+      <div class="circuit-desc">
+        Circuit incentive premium pour 22 voyageurs : immersion dans la médina, hébergement riad 5★,
+        journée désert Agafay, expériences gastronomiques, guide francophone et transport VIP inclus.
+      </div>
+      <div class="circuit-grid">
+        <div class="circuit-field">
+          <div class="circuit-label">Dates</div>
+          <div class="circuit-value">12–19 mai 2026</div>
+        </div>
+        <div class="circuit-field">
+          <div class="circuit-label">Durée</div>
+          <div class="circuit-value">8 jours / 7 nuits</div>
+        </div>
+        <div class="circuit-field">
+          <div class="circuit-label">Participants</div>
+          <div class="circuit-value">22 pax · France</div>
+        </div>
+        <div class="circuit-field">
+          <div class="circuit-label">Type</div>
+          <div class="circuit-value">Incentive luxe</div>
+        </div>
+      </div>
+      <div class="circuit-block">
+        <div class="circuit-block-title">🏨 Hébergement sélectionné</div>
+        <div class="hotel-row">
+          <div><b>Riad La Maison Arabe 5★</b><br><span>22 chambres · Petit-déjeuner · 7 nuits</span></div>
+          <div style="font-weight:900;color:#A8371D">32 340 €</div>
+        </div>
+        <div class="hotel-row">
+          <div><b>Option upgrade</b><br><span>Palais Namaskar · Pool villas · supplément</span></div>
+          <div style="font-weight:900;color:#7C6F69">+18 900 €</div>
+        </div>
+      </div>
+      <div class="circuit-block">
+        <div class="circuit-block-title">👤 Guide inclus</div>
+        <div class="guide-row">
+          <div><b>Hassan Benjelloun</b><br><span>Guide officiel FR/EN · 8 jours · Médina, Atlas, Agafay</span></div>
+          <div class="included-pill">Inclus</div>
+        </div>
+      </div>
+      <div class="circuit-block">
+        <div class="circuit-block-title">🗓️ Aperçu du circuit</div>
+        <div class="circuit-days">
+          <div class="circuit-day"><b>J1</b><span>Arrivée, check-in riad, médina</span></div>
+          <div class="circuit-day"><b>J2</b><span>Désert Agafay, 4x4, dîner fantasia</span></div>
+          <div class="circuit-day"><b>J3</b><span>Atlas & déjeuner berbère</span></div>
+          <div class="circuit-day"><b>J4</b><span>Journée spa + rooftop privé</span></div>
+          <div class="circuit-day"><b>J8</b><span>Assistance départ aéroport</span></div>
+        </div>
+      </div>
+      <div class="quote-mini">
+        <div class="quote-mini-row"><span>Coût fournisseurs</span><strong>63 220 €</strong></div>
+        <div class="quote-mini-row"><span>Marge S'TOURS 28%</span><strong>17 702 €</strong></div>
+        <div class="quote-mini-total">
+          <span>Cotation finale HT<br>3 678 € / pax</span>
+          <b>80 922 €</b>
+        </div>
+      </div>
+      <div class="circuit-actions">
+        <button class="btn btn-secondary" onclick="switchTab(document.getElementById('tab-devis'),'p-devis','devis')">Voir cotation</button>
+        <button class="btn btn-primary" onclick="showToast('Circuit ajouté au devis')">Valider circuit</button>
+      </div>
+    </div>
+
+    <!-- Onglets jour -->
+    <div class="day-tab-row" id="day-tabs">
+      <div class="day-chip active" onclick="switchDay(this,1)">J1</div>
+      <div class="day-chip" onclick="switchDay(this,2)">J2</div>
+      <div class="day-chip" onclick="switchDay(this,3)">J3</div>
+      <div class="day-chip" onclick="switchDay(this,4)">J4</div>
+      <div class="day-chip" onclick="switchDay(this,5)">J5</div>
+      <div class="day-chip" onclick="switchDay(this,6)">J6</div>
+      <div class="day-chip" onclick="switchDay(this,7)">J7</div>
+      <div class="day-chip" onclick="switchDay(this,8)">J8</div>
+    </div>
+
+    <!-- Day content -->
+    <div id="day-content">
+      <!-- Day 1 -->
+      <div id="day-1" class="day-view">
+        <div class="day-builder">
+          <div class="day-title">Jour 1 — Arrivée à Marrakech</div>
+          <div class="day-sub">Dimanche 12 mai 2026</div>
+
+          <div class="timeline-item">
+            <div class="tl-icon" style="background:rgba(59,130,246,.15)">✈️</div>
+            <div class="tl-content">
+              <div class="tl-time">09:30</div>
+              <div class="tl-name">Transfert Aéroport → Riad</div>
+              <div class="tl-detail">Khalid Transport · Bus 35 pax · A/C</div>
+              <div class="tl-cost">320 € · inclus</div>
+            </div>
+          </div>
+
+          <div class="timeline-item">
+            <div class="tl-icon" style="background:rgba(20,184,166,.15)">🏨</div>
+            <div class="tl-content">
+              <div class="tl-time">12:00</div>
+              <div class="tl-name">Check-in — Riad La Maison Arabe</div>
+              <div class="tl-detail">22 chambres · Petit déj. inclus · 3 nuits</div>
+              <div class="tl-cost">4 620 € (3 nuits)</div>
+            </div>
+          </div>
+
+          <div class="timeline-item">
+            <div class="tl-icon" style="background:rgba(245,158,11,.15)">🍽️</div>
+            <div class="tl-content">
+              <div class="tl-time">13:30</div>
+              <div class="tl-name">Déjeuner — Dar Moha</div>
+              <div class="tl-detail">Menu gastronomique marocain · 22 couverts</div>
+              <div class="tl-cost">880 € (40 €/pers)</div>
+            </div>
+          </div>
+
+          <div class="timeline-item">
+            <div class="tl-icon" style="background:rgba(139,92,246,.15)">🧭</div>
+            <div class="tl-content">
+              <div class="tl-time">15:30</div>
+              <div class="tl-name">Visite guidée Médina</div>
+              <div class="tl-detail">Hassan Benjelloun · 3h · Souks & Monuments</div>
+              <div class="tl-cost">350 € (guide)</div>
+            </div>
+          </div>
+
+          <div class="timeline-item">
+            <div class="tl-icon" style="background:rgba(239,68,68,.15)">🌅</div>
+            <div class="tl-content">
+              <div class="tl-time">18:30</div>
+              <div class="tl-name">Dîner Panoramique — Terrace 360°</div>
+              <div class="tl-detail">Cocktail d'accueil + Dîner · Musique live</div>
+              <div class="tl-cost">1 540 € (70 €/pers)</div>
+            </div>
+          </div>
+
+          <button class="add-step-btn" onclick="openSheet('sheet-add-step')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Ajouter une étape
+          </button>
+        </div>
+
+        <!-- Budget jour -->
+        <div class="card">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Budget Jour 1
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted2);margin-bottom:6px">
+            <span>Coût total</span><span style="color:var(--text);font-weight:800">7 710 €</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted2);margin-bottom:6px">
+            <span>Par personne</span><span style="color:var(--teal2);font-weight:800">350 €</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted2)">
+            <span>% du budget total</span><span style="color:var(--orange);font-weight:800">15.9%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Days 2-8 placeholder -->
+      <div id="day-2" class="day-view" style="display:none">
+        <div class="day-builder">
+          <div class="day-title">Jour 2 — Désert Agafay</div>
+          <div class="day-sub">Lundi 13 mai 2026</div>
+          <div class="timeline-item">
+            <div class="tl-icon" style="background:rgba(245,158,11,.15)">🐪</div>
+            <div class="tl-content">
+              <div class="tl-time">07:00</div>
+              <div class="tl-name">Excursion Désert Agafay</div>
+              <div class="tl-detail">4x4 privé · Bivouac · Coucher de soleil</div>
+              <div class="tl-cost">2 200 € (100 €/pers)</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="tl-icon" style="background:rgba(34,197,94,.15)">🏊</div>
+            <div class="tl-content">
+              <div class="tl-time">14:00</div>
+              <div class="tl-name">Retour Riad + Spa Hammam</div>
+              <div class="tl-detail">Soin traditionnel 90min · 22 personnes</div>
+              <div class="tl-cost">1 760 € (80 €/pers)</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="tl-icon" style="background:rgba(245,158,11,.15)">🍽️</div>
+            <div class="tl-content">
+              <div class="tl-time">20:00</div>
+              <div class="tl-name">Fantasia Privée</div>
+              <div class="tl-detail">Show équestre · Dîner fassi · 22 couverts</div>
+              <div class="tl-cost">3 300 € (150 €/pers)</div>
+            </div>
+          </div>
+          <button class="add-step-btn" onclick="openSheet('sheet-add-step')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Ajouter une étape
+          </button>
+        </div>
+      </div>
+
+      <div id="day-3" class="day-view" style="display:none">
+        <div class="empty" style="margin-top:30px">
+          <div class="empty-icon">📋</div>
+          <div class="empty-text">Jour 3 en cours de conception</div>
+          <button class="btn btn-outline" style="margin-top:14px;width:auto;padding:10px 20px" onclick="openSheet('sheet-add-step')">+ Ajouter une étape</button>
+        </div>
+      </div>
+      <div id="day-4" class="day-view" style="display:none">
+        <div class="empty" style="margin-top:30px"><div class="empty-icon">📋</div><div class="empty-text">Jour 4 vide</div><button class="btn btn-outline" style="margin-top:14px;width:auto;padding:10px 20px" onclick="openSheet('sheet-add-step')">+ Ajouter une étape</button></div>
+      </div>
+      <div id="day-5" class="day-view" style="display:none">
+        <div class="empty" style="margin-top:30px"><div class="empty-icon">📋</div><div class="empty-text">Jour 5 vide</div><button class="btn btn-outline" style="margin-top:14px;width:auto;padding:10px 20px" onclick="openSheet('sheet-add-step')">+ Ajouter une étape</button></div>
+      </div>
+      <div id="day-6" class="day-view" style="display:none">
+        <div class="empty" style="margin-top:30px"><div class="empty-icon">📋</div><div class="empty-text">Jour 6 vide</div><button class="btn btn-outline" style="margin-top:14px;width:auto;padding:10px 20px" onclick="openSheet('sheet-add-step')">+ Ajouter une étape</button></div>
+      </div>
+      <div id="day-7" class="day-view" style="display:none">
+        <div class="empty" style="margin-top:30px"><div class="empty-icon">📋</div><div class="empty-text">Jour 7 vide</div><button class="btn btn-outline" style="margin-top:14px;width:auto;padding:10px 20px" onclick="openSheet('sheet-add-step')">+ Ajouter une étape</button></div>
+      </div>
+      <div id="day-8" class="day-view" style="display:none">
+        <div class="day-builder">
+          <div class="day-title">Jour 8 — Départ</div>
+          <div class="day-sub">Dimanche 19 mai 2026</div>
+          <div class="timeline-item">
+            <div class="tl-icon" style="background:rgba(239,68,68,.15)">🧳</div>
+            <div class="tl-content">
+              <div class="tl-time">09:00</div>
+              <div class="tl-name">Check-out & Bagages</div>
+              <div class="tl-detail">Riad La Maison Arabe → Aéroport</div>
+              <div class="tl-cost">320 € · inclus</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="tl-icon" style="background:rgba(59,130,246,.15)">✈️</div>
+            <div class="tl-content">
+              <div class="tl-time">12:45</div>
+              <div class="tl-name">Départ vol AT 655 → Paris CDG</div>
+              <div class="tl-detail">Arrivée 16:10 · Assistance aéroport incluse</div>
+              <div class="tl-cost">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ PAGE 3 — CATALOGUE ════════════════════════ -->
+<div class="page" id="p-catalogue">
+  <div class="screen">
+
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="search-input" type="search" placeholder="Hôtel, resto, activité, guide…"/>
+    </div>
+
+    <div class="filter-row" id="cat-filters">
+      <div class="filter-pill active" onclick="filterCat(this,'all')">Tout</div>
+      <div class="filter-pill" onclick="filterCat(this,'hotel')">🏨 Hôtels</div>
+      <div class="filter-pill" onclick="filterCat(this,'resto')">🍽️ Restos</div>
+      <div class="filter-pill" onclick="filterCat(this,'activite')">🧭 Activités</div>
+      <div class="filter-pill" onclick="filterCat(this,'guide')">👤 Guides</div>
+      <div class="filter-pill" onclick="filterCat(this,'transport')">🚌 Transport</div>
+    </div>
+
+    <div id="supplier-list">
+
+      <div class="supplier-card" data-cat="hotel">
+        <div class="supp-icon" style="background:rgba(20,184,166,.12)">🏨</div>
+        <div class="supp-body">
+          <div class="supp-name">La Maison Arabe</div>
+          <div class="supp-type">Riad 5★ · Médina · Marrakech</div>
+          <div class="supp-stars">★★★★★</div>
+          <div class="supp-tags">
+            <div class="supp-tag">SGL 210€</div>
+            <div class="supp-tag">DBL 340€</div>
+            <div class="supp-tag">Allotement</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <div class="supp-price">210 €<br><span style="font-size:10px;color:var(--muted);font-weight:400">/nuit</span></div>
+          <div class="add-supp-btn" onclick="addToItinerary('La Maison Arabe')">+</div>
+        </div>
+      </div>
+
+      <div class="supplier-card" data-cat="hotel">
+        <div class="supp-icon" style="background:rgba(20,184,166,.12)">🏨</div>
+        <div class="supp-body">
+          <div class="supp-name">Palais Namaskar</div>
+          <div class="supp-type">Palace 5★ · Palmeraie · Marrakech</div>
+          <div class="supp-stars">★★★★★</div>
+          <div class="supp-tags">
+            <div class="supp-tag">Pool Villa</div>
+            <div class="supp-tag">MICE</div>
+            <div class="supp-tag">Spa</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <div class="supp-price">480 €<br><span style="font-size:10px;color:var(--muted);font-weight:400">/nuit</span></div>
+          <div class="add-supp-btn" onclick="addToItinerary('Palais Namaskar')">+</div>
+        </div>
+      </div>
+
+      <div class="supplier-card" data-cat="resto">
+        <div class="supp-icon" style="background:rgba(245,158,11,.12)">🍽️</div>
+        <div class="supp-body">
+          <div class="supp-name">Dar Moha</div>
+          <div class="supp-type">Gastronomique · Médina · Marrakech</div>
+          <div class="supp-stars">★★★★★</div>
+          <div class="supp-tags">
+            <div class="supp-tag">Groupes</div>
+            <div class="supp-tag">40 couverts</div>
+            <div class="supp-tag">Menu 65€</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <div class="supp-price">65 €<br><span style="font-size:10px;color:var(--muted);font-weight:400">/pers</span></div>
+          <div class="add-supp-btn" onclick="addToItinerary('Dar Moha')">+</div>
+        </div>
+      </div>
+
+      <div class="supplier-card" data-cat="resto">
+        <div class="supp-icon" style="background:rgba(245,158,11,.12)">🍽️</div>
+        <div class="supp-body">
+          <div class="supp-name">Nomad Rooftop</div>
+          <div class="supp-type">Bistro Moderne · Médina · Marrakech</div>
+          <div class="supp-stars">★★★★☆</div>
+          <div class="supp-tags">
+            <div class="supp-tag">Panoramique</div>
+            <div class="supp-tag">Privatisable</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <div class="supp-price">45 €<br><span style="font-size:10px;color:var(--muted);font-weight:400">/pers</span></div>
+          <div class="add-supp-btn" onclick="addToItinerary('Nomad Rooftop')">+</div>
+        </div>
+      </div>
+
+      <div class="supplier-card" data-cat="activite">
+        <div class="supp-icon" style="background:rgba(139,92,246,.12)">🐪</div>
+        <div class="supp-body">
+          <div class="supp-name">Excursion Désert Agafay</div>
+          <div class="supp-type">Activité · Journée complète</div>
+          <div class="supp-stars">★★★★★</div>
+          <div class="supp-tags">
+            <div class="supp-tag">4x4</div>
+            <div class="supp-tag">Bivouac</div>
+            <div class="supp-tag">Sunset</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <div class="supp-price">100 €<br><span style="font-size:10px;color:var(--muted);font-weight:400">/pers</span></div>
+          <div class="add-supp-btn" onclick="addToItinerary('Agafay Desert')">+</div>
+        </div>
+      </div>
+
+      <div class="supplier-card" data-cat="activite">
+        <div class="supp-icon" style="background:rgba(139,92,246,.12)">🏊</div>
+        <div class="supp-body">
+          <div class="supp-name">Hammam & Spa Traditionnel</div>
+          <div class="supp-type">Bien-être · 90 min · Médina</div>
+          <div class="supp-stars">★★★★★</div>
+          <div class="supp-tags">
+            <div class="supp-tag">Privatisable</div>
+            <div class="supp-tag">Groupe ≤25</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <div class="supp-price">80 €<br><span style="font-size:10px;color:var(--muted);font-weight:400">/pers</span></div>
+          <div class="add-supp-btn" onclick="addToItinerary('Hammam Traditionnel')">+</div>
+        </div>
+      </div>
+
+      <div class="supplier-card" data-cat="guide">
+        <div class="supp-icon" style="background:rgba(34,197,94,.12)">👤</div>
+        <div class="supp-body">
+          <div class="supp-name">Hassan Benjelloun</div>
+          <div class="supp-type">Guide officiel · Français / Anglais / Espagnol</div>
+          <div class="supp-stars">★★★★★</div>
+          <div class="supp-tags">
+            <div class="supp-tag">Médina</div>
+            <div class="supp-tag">Culture</div>
+            <div class="supp-tag">Demi-journée 180€</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <div class="supp-price">350 €<br><span style="font-size:10px;color:var(--muted);font-weight:400">/jour</span></div>
+          <div class="add-supp-btn" onclick="addToItinerary('Hassan Benjelloun')">+</div>
+        </div>
+      </div>
+
+      <div class="supplier-card" data-cat="transport">
+        <div class="supp-icon" style="background:rgba(59,130,246,.12)">🚌</div>
+        <div class="supp-body">
+          <div class="supp-name">Khalid Transport VIP</div>
+          <div class="supp-type">Flotte privée · Mercedes · Marrakech</div>
+          <div class="supp-stars">★★★★★</div>
+          <div class="supp-tags">
+            <div class="supp-tag">Bus 35</div>
+            <div class="supp-tag">Minivan 8</div>
+            <div class="supp-tag">Berline</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <div class="supp-price">320 €<br><span style="font-size:10px;color:var(--muted);font-weight:400">/transfert</span></div>
+          <div class="add-supp-btn" onclick="addToItinerary('Khalid Transport')">+</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAGE 4 — DEVIS ═════════════════════════════ -->
+<div class="page" id="p-devis">
+  <div class="screen">
+
+    <!-- Selector -->
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:14px;font-weight:800;color:var(--text)">🇫🇷 Groupe Paris — 22 pax</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:2px">8 jours · 12–19 mai 2026</div>
+        </div>
+        <div class="status-badge badge-design" style="font-size:11px">Brouillon</div>
+      </div>
+    </div>
+
+    <!-- Hébergement -->
+    <div class="quote-section">
+      <div class="section-label">
+        <span style="font-size:16px">🏨</span> Hébergement
+      </div>
+      <div class="quote-line">
+        <div class="ql-icon">🏛️</div>
+        <div class="ql-info">
+          <div class="ql-name">Riad La Maison Arabe</div>
+          <div class="ql-detail">22 ch. × 7 nuits × 210 €</div>
+        </div>
+        <div class="ql-price">32 340 €</div>
+      </div>
+    </div>
+
+    <!-- Restauration -->
+    <div class="quote-section">
+      <div class="section-label"><span style="font-size:16px">🍽️</span> Restauration</div>
+      <div class="quote-line">
+        <div class="ql-icon">🍽️</div>
+        <div class="ql-info">
+          <div class="ql-name">Dîners gastronomiques (7)</div>
+          <div class="ql-detail">22 pax × 7 dîners × 65 €</div>
+        </div>
+        <div class="ql-price">10 010 €</div>
+      </div>
+      <div class="quote-line">
+        <div class="ql-icon">☕</div>
+        <div class="ql-info">
+          <div class="ql-name">Déjeuners (6)</div>
+          <div class="ql-detail">22 pax × 6 déj. × 40 €</div>
+        </div>
+        <div class="ql-price">5 280 €</div>
+      </div>
+    </div>
+
+    <!-- Activités -->
+    <div class="quote-section">
+      <div class="section-label"><span style="font-size:16px">🧭</span> Activités & Excursions</div>
+      <div class="quote-line">
+        <div class="ql-icon">🐪</div>
+        <div class="ql-info">
+          <div class="ql-name">Désert Agafay (2 jours)</div>
+          <div class="ql-detail">22 pax × 2 × 100 €</div>
+        </div>
+        <div class="ql-price">4 400 €</div>
+      </div>
+      <div class="quote-line">
+        <div class="ql-icon">🏊</div>
+        <div class="ql-info">
+          <div class="ql-name">Hammam & Spa (1 session)</div>
+          <div class="ql-detail">22 pax × 80 €</div>
+        </div>
+        <div class="ql-price">1 760 €</div>
+      </div>
+      <div class="quote-line">
+        <div class="ql-icon">🧭</div>
+        <div class="ql-info">
+          <div class="ql-name">Guides officiels (8 jours)</div>
+          <div class="ql-detail">Hassan B. × 8j × 350 €</div>
+        </div>
+        <div class="ql-price">2 800 €</div>
+      </div>
+    </div>
+
+    <!-- Transport -->
+    <div class="quote-section">
+      <div class="section-label"><span style="font-size:16px">🚌</span> Transport</div>
+      <div class="quote-line">
+        <div class="ql-icon">🚌</div>
+        <div class="ql-info">
+          <div class="ql-name">Bus VIP Khalid (8 jours)</div>
+          <div class="ql-detail">Bus 35 pax × 8 × 320 €</div>
+        </div>
+        <div class="ql-price">2 560 €</div>
+      </div>
+    </div>
+
+    <!-- Divers -->
+    <div class="quote-section">
+      <div class="section-label"><span style="font-size:16px">📋</span> Frais & Divers</div>
+      <div class="quote-line">
+        <div class="ql-icon">🎭</div>
+        <div class="ql-info">
+          <div class="ql-name">Fantasia Privée</div>
+          <div class="ql-detail">22 pax × 150 €</div>
+        </div>
+        <div class="ql-price">3 300 €</div>
+      </div>
+      <div class="quote-line">
+        <div class="ql-icon">🛡️</div>
+        <div class="ql-info">
+          <div class="ql-name">Assurance voyage groupe</div>
+          <div class="ql-detail">22 pax × 35 €</div>
+        </div>
+        <div class="ql-price">770 €</div>
+      </div>
+    </div>
+
+    <!-- Total & Marge -->
+    <div class="quote-total-card">
+      <div class="total-row">
+        <div class="total-label">Coût total fournisseurs</div>
+        <div class="total-val">63 220 €</div>
+      </div>
+      <div class="total-row">
+        <div class="total-label">Marge S'TOURS (28%)</div>
+        <div class="total-val green">+17 702 €</div>
+      </div>
+      <div class="total-row">
+        <div class="total-label bold">Prix de vente HT</div>
+        <div class="total-val big">80 922 €</div>
+      </div>
+      <div class="total-row">
+        <div class="total-label">Prix par personne</div>
+        <div class="total-val" style="color:var(--teal2);font-size:16px;font-weight:800">3 678 € / pax</div>
+      </div>
+      <div class="margin-gauge">
+        <div class="margin-label"><span>Marge nette</span><span style="color:var(--green);font-weight:700">28%</span></div>
+        <div class="margin-bar"><div class="margin-fill" style="width:28%"></div></div>
+      </div>
+    </div>
+
+    <!-- Marge slider -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">Ajuster la marge</div>
+      <input type="range" min="10" max="45" value="28" style="width:100%;accent-color:var(--teal);margin-bottom:6px" oninput="updateMargin(this.value)"/>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+        <span>10%</span><span id="margin-display" style="color:var(--teal2);font-weight:800;font-size:14px">28%</span><span>45%</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="devis-actions" style="padding-bottom:14px">
+      <button class="btn btn-secondary" onclick="showToast('PDF généré ✓')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        PDF
+      </button>
+      <button class="btn btn-primary" onclick="showToast('Devis envoyé au client ✓')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Envoyer le devis
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ PAGE 5 — MESSAGES ══════════════════════════ -->
+<div class="page" id="p-messages">
+  <div class="screen">
+
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="search-input" type="search" placeholder="Chercher une conversation…"/>
+    </div>
+
+    <div class="msg-thread" onclick="openChat('Émilie Rousseau','bg1')">
+      <div class="msg-header">
+        <div class="msg-av" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">ER</div>
+        <div class="msg-info">
+          <div class="msg-contact">Émilie Rousseau · Groupe Paris</div>
+          <div class="msg-preview">Bonjour, avez-vous la confirmation du Riad pour mai ?</div>
+        </div>
+        <div class="msg-meta">
+          <div class="msg-time">09:42</div>
+          <div class="msg-unread">2</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="msg-thread" onclick="openChat('Klaus Weber','bg2')">
+      <div class="msg-header">
+        <div class="msg-av" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">KW</div>
+        <div class="msg-info">
+          <div class="msg-contact">Klaus Weber · Mariage Berlin</div>
+          <div class="msg-preview">Le devis correspond parfaitement à notre budget !</div>
+        </div>
+        <div class="msg-meta">
+          <div class="msg-time">Hier</div>
+          <div class="msg-unread">1</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="msg-thread" onclick="openChat('Agence Voyages Plus','bg3')">
+      <div class="msg-header">
+        <div class="msg-av" style="background:linear-gradient(135deg,#22c55e,#14b8a6)">VP</div>
+        <div class="msg-info">
+          <div class="msg-contact">Agence Voyages Plus · B2B</div>
+          <div class="msg-preview">Merci pour le programme. Nous confirmons le groupe.</div>
+        </div>
+        <div class="msg-meta">
+          <div class="msg-time">Hier</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="msg-thread" onclick="openChat('Ahmed Al-Rashid · Dubai Gold','bg4')">
+      <div class="msg-header">
+        <div class="msg-av" style="background:linear-gradient(135deg,#f59e0b,#84cc16)">AR</div>
+        <div class="msg-info">
+          <div class="msg-contact">Ahmed Al-Rashid · Dubai Gold</div>
+          <div class="msg-preview">Peut-on ajouter une soirée privée le jour 4 ?</div>
+        </div>
+        <div class="msg-meta">
+          <div class="msg-time">Lun</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="msg-thread" onclick="openChat('Corporate Madrid','bg5')">
+      <div class="msg-header">
+        <div class="msg-av" style="background:linear-gradient(135deg,#6366f1,#3b82f6)">CM</div>
+        <div class="msg-info">
+          <div class="msg-contact">Corporate Madrid · URGENT</div>
+          <div class="msg-preview">⚠️ Deadline devis : vendredi 30 avril !</div>
+        </div>
+        <div class="msg-meta">
+          <div class="msg-time">Dim</div>
+          <div class="msg-unread">!</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ CHAT VIEW ══════════════════════════════════ -->
+<div class="chat-view" id="chat-view">
+  <div class="chat-nav">
+    <button class="chat-back" onclick="closeChat()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6"/></svg>
+      Retour
+    </button>
+    <div class="chat-contact" id="chat-name">—</div>
+  </div>
+  <div class="chat-msgs" id="chat-msgs"></div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chat-input" placeholder="Écrire un message…" onkeydown="if(event.key==='Enter')sendMsg()"/>
+    <button class="send-btn" onclick="sendMsg()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ══ BOTTOM TABS ════════════════════════════════ -->
+<nav class="tabs">
+  <button class="tab active" onclick="switchTab(this,'p-dossiers','dossiers')" id="tab-dossiers">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    Dossiers
+  </button>
+  <button class="tab" onclick="switchTab(this,'p-itineraire','itineraire')" id="tab-itineraire">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    Itinéraire
+  </button>
+  <button class="tab" onclick="switchTab(this,'p-catalogue','catalogue')" id="tab-catalogue">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Catalogue
+  </button>
+  <button class="tab" onclick="switchTab(this,'p-devis','devis')" id="tab-devis">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Devis
+  </button>
+  <button class="tab" onclick="switchTab(this,'p-messages','messages')" id="tab-messages">
+    <div class="tab-badge">3</div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Messages
+  </button>
+</nav>
+
+<!-- ══ SHEETS ═════════════════════════════════════ -->
+
+<!-- New Dossier Sheet -->
+<div class="sheet-overlay" id="overlay-new-dossier" onclick="closeSheet('sheet-new-dossier')"></div>
+<div class="bottom-sheet" id="sheet-new-dossier">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Nouveau Dossier</div>
+  <div class="form-group">
+    <label class="form-label">Nom du groupe / client</label>
+    <input class="form-input" placeholder="Ex : Groupe Tokyo — 20 pax"/>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label">Nationalité</label>
+      <input class="form-input" placeholder="🇯🇵 Japonais"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Pax</label>
+      <input class="form-input" type="number" placeholder="20"/>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label">Date arrivée</label>
+      <input class="form-input" type="date"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Durée (jours)</label>
+      <input class="form-input" type="number" placeholder="7"/>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Budget estimé (€)</label>
+    <input class="form-input" type="number" placeholder="45 000"/>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Type de voyage</label>
+    <select class="form-select">
+      <option>Incentive Luxe</option>
+      <option>Mariage & Événement</option>
+      <option>Circuit Culturel</option>
+      <option>Team Building</option>
+      <option>Tour Gastronomique</option>
+      <option>Aventure & Nature</option>
+    </select>
+  </div>
+  <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="createDossier()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Créer le dossier
+  </button>
+</div>
+
+<!-- Add Step Sheet -->
+<div class="sheet-overlay" id="overlay-add-step" onclick="closeSheet('sheet-add-step')"></div>
+<div class="bottom-sheet" id="sheet-add-step">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Ajouter une étape</div>
+  <div class="step-type-grid">
+    <div class="step-type-btn sel" onclick="selStepType(this)"><span class="emoji">🏨</span>Hôtel</div>
+    <div class="step-type-btn" onclick="selStepType(this)"><span class="emoji">🍽️</span>Repas</div>
+    <div class="step-type-btn" onclick="selStepType(this)"><span class="emoji">🧭</span>Activité</div>
+    <div class="step-type-btn" onclick="selStepType(this)"><span class="emoji">🚌</span>Transfert</div>
+    <div class="step-type-btn" onclick="selStepType(this)"><span class="emoji">✈️</span>Vol</div>
+    <div class="step-type-btn" onclick="selStepType(this)"><span class="emoji">👤</span>Guide</div>
+    <div class="step-type-btn" onclick="selStepType(this)"><span class="emoji">🎭</span>Spectacle</div>
+    <div class="step-type-btn" onclick="selStepType(this)"><span class="emoji">📝</span>Note</div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Nom de l'étape</label>
+    <input class="form-input" placeholder="Ex : Visite Palais Bahia"/>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label">Heure</label>
+      <input class="form-input" type="time" value="10:00"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Durée</label>
+      <input class="form-input" placeholder="2h 30min"/>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Fournisseur / Prestataire</label>
+    <input class="form-input" placeholder="Sélectionner dans le catalogue…"/>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Coût (€)</label>
+    <input class="form-input" type="number" placeholder="0"/>
+  </div>
+  <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="addStep()">
+    Ajouter à l'itinéraire
+  </button>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────
+let currentTab = 'dossiers'
+
+// ── Tab switching ──────────────────────────────────
+function switchTab(el, pageId, tabId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+  el.classList.add('active')
+  document.getElementById(pageId).classList.add('active')
+  currentTab = tabId
+  const fab = document.getElementById('main-fab')
+  if (tabId === 'dossiers') {
+    fab.style.display = 'flex'
+    fab.onclick = () => openSheet('sheet-new-dossier')
+  } else if (tabId === 'itineraire') {
+    fab.style.display = 'flex'
+    fab.onclick = () => openSheet('sheet-add-step')
+  } else {
+    fab.style.display = 'none'
+  }
+}
+
+// ── Day switching ──────────────────────────────────
+function switchDay(el, day) {
+  document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('active'))
+  document.querySelectorAll('.day-view').forEach(v => v.style.display = 'none')
+  el.classList.add('active')
+  const dv = document.getElementById('day-' + day)
+  if (dv) dv.style.display = 'block'
+}
+
+// ── Dossier filter ────────────────────────────────
+function filterDoss(el, cat) {
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'))
+  el.classList.add('active')
+  document.querySelectorAll('.dossier-card').forEach(c => {
+    c.style.display = (cat === 'all' || c.dataset.cat === cat) ? '' : 'none'
+  })
+}
+
+// ── Catalogue filter ───────────────────────────────
+function filterCat(el, cat) {
+  document.querySelectorAll('#cat-filters .filter-pill').forEach(p => p.classList.remove('active'))
+  el.classList.add('active')
+  document.querySelectorAll('.supplier-card').forEach(c => {
+    c.style.display = (cat === 'all' || c.dataset.cat === cat) ? '' : 'none'
+  })
+}
+
+// ── Sheet helpers ──────────────────────────────────
+function openSheet(id) {
+  document.getElementById(id).classList.add('open')
+  const ov = id.replace('sheet-', 'overlay-')
+  const overlay = document.getElementById(ov)
+  if (overlay) overlay.classList.add('open')
+}
+function closeSheet(id) {
+  document.getElementById(id).classList.remove('open')
+  const ov = id.replace('sheet-', 'overlay-')
+  const overlay = document.getElementById(ov)
+  if (overlay) overlay.classList.remove('open')
+}
+
+// ── Chat ───────────────────────────────────────────
+const DEMO_MSGS = {
+  'Émilie Rousseau': [
+    { dir:'in', text:'Bonjour Sara ! Avez-vous la confirmation du Riad pour le groupe de mai ?', t:'09:15' },
+    { dir:'out', text:'Bonjour Émilie ! Oui, le Riad La Maison Arabe est confirmé pour les 22 chambres 😊', t:'09:38' },
+    { dir:'in', text:'Super ! Et pour le dîner d\'arrivée, c\'est bien Dar Moha ?', t:'09:40' },
+    { dir:'in', text:'Pouvez-vous envoyer le programme complet en PDF ?', t:'09:42' },
+  ],
+  'Klaus Weber': [
+    { dir:'in', text:'Hallo Sara! Das Angebot ist perfekt für unser Budget!', t:'Hier 14:22' },
+    { dir:'out', text:'Bonjour Klaus! Très heureux que le devis vous convienne. Voulez-vous procéder à la confirmation?', t:'Hier 15:05' },
+    { dir:'in', text:'Le devis correspond parfaitement à notre budget ! Nous confirmons le groupe.', t:'Hier 17:33' },
+  ],
+  default: [
+    { dir:'in', text:'Bonjour, j\'ai une question sur le programme prévu.', t:'10:00' },
+    { dir:'out', text:'Bonjour ! Je suis disponible, en quoi puis-je vous aider ?', t:'10:05' },
+  ]
+}
+
+function openChat(name, bg) {
+  document.getElementById('chat-name').textContent = name.split('·')[0].trim()
+  const msgsEl = document.getElementById('chat-msgs')
+  msgsEl.innerHTML = ''
+  const msgs = DEMO_MSGS[name.split('·')[0].trim()] || DEMO_MSGS.default
+  msgs.forEach(m => {
+    const b = document.createElement('div')
+    b.className = 'bubble ' + m.dir
+    b.innerHTML = m.text + '<span class="bubble-time">' + m.t + '</span>'
+    msgsEl.appendChild(b)
+  })
+  document.getElementById('chat-view').classList.add('open')
+  setTimeout(() => msgsEl.scrollTop = msgsEl.scrollHeight, 50)
+}
+
+function closeChat() {
+  document.getElementById('chat-view').classList.remove('open')
+}
+
+function sendMsg() {
+  const inp = document.getElementById('chat-input')
+  const txt = inp.value.trim()
+  if (!txt) return
+  const msgsEl = document.getElementById('chat-msgs')
+  const b = document.createElement('div')
+  const now = new Date()
+  b.className = 'bubble out'
+  b.innerHTML = txt + '<span class="bubble-time">' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0') + '</span>'
+  msgsEl.appendChild(b)
+  inp.value = ''
+  msgsEl.scrollTop = msgsEl.scrollHeight
+  // Auto reply
+  setTimeout(() => {
+    const r = document.createElement('div')
+    r.className = 'bubble in'
+    r.innerHTML = 'Merci pour votre message, je reviens vers vous rapidement.<span class="bubble-time">Maintenant</span>'
+    msgsEl.appendChild(r)
+    msgsEl.scrollTop = msgsEl.scrollHeight
+  }, 1200)
+}
+
+// ── Actions ────────────────────────────────────────
+function openDossier(name) {
+  switchTab(document.getElementById('tab-itineraire'), 'p-itineraire', 'itineraire')
+  showToast('Dossier ouvert : ' + name)
+}
+
+function addToItinerary(name) {
+  showToast('✓ ' + name + ' ajouté à J1')
+}
+
+function createDossier() {
+  closeSheet('sheet-new-dossier')
+  showToast('Nouveau dossier créé ✓')
+}
+
+function addStep() {
+  closeSheet('sheet-add-step')
+  showToast('Étape ajoutée à l\'itinéraire ✓')
+}
+
+function selStepType(el) {
+  document.querySelectorAll('.step-type-btn').forEach(b => b.classList.remove('sel'))
+  el.classList.add('sel')
+}
+
+function updateMargin(val) {
+  document.getElementById('margin-display').textContent = val + '%'
+}
+
+// ── Toast ──────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.classList.add('show')
+  setTimeout(() => t.classList.remove('show'), 2200)
+}
+
+// ── Init ───────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // FAB visible on dossiers tab by default
+  document.getElementById('main-fab').style.display = 'flex'
+})
+</script>
+</body>
+</html>
