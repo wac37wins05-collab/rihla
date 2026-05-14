@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#F6EEE6"/>
+<title>RIHLA Guide — Hassan Benjelloun</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --indigo:#6366f1;--indigo2:#818cf8;
+  --bg:#0b0e17;--bg2:#111520;--card:#1a2035;
+  --border:rgba(255,255,255,0.07);
+  --text:#f1f5f9;--muted:#64748b;--muted2:#94a3b8;
+  --green:#22c55e;--orange:#f59e0b;--red:#ef4444;
+  --safe:env(safe-area-inset-bottom,16px);
+}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh;max-width:430px;margin:0 auto;padding-bottom:calc(70px + var(--safe))}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.page{display:none;animation:fadeUp .25s ease}
+.page.active{display:block}
+
+/* HEADER */
+.app-header{background:rgba(11,14,23,.92);backdrop-filter:blur(16px);position:sticky;top:0;z-index:50;padding:14px 18px 12px;border-bottom:1px solid var(--border)}
+.header-row{display:flex;align-items:center;justify-content:space-between}
+.guide-info{display:flex;align-items:center;gap:10px}
+.guide-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff}
+.guide-name{font-size:15px;font-weight:800;color:#fff}
+.guide-role{font-size:11px;color:var(--muted)}
+.status-pill{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+
+/* TABS */
+.tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(17,21,32,.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:8px 0 calc(8px + var(--safe));z-index:100}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;cursor:pointer;border:none;background:none;color:var(--muted);font-size:10px;font-weight:600;transition:color .2s;position:relative}
+.tab svg{width:22px;height:22px;stroke-width:1.8}
+.tab.active{color:var(--indigo2)}
+.notif-badge{position:absolute;top:4px;right:calc(50% - 18px);width:14px;height:14px;border-radius:50%;background:var(--red);font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;color:#fff}
+
+/* SCREEN */
+.screen{padding:14px 14px 0}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:12px}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+
+/* KPI ROW */
+.kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 12px;text-align:center}
+.kpi-val{font-size:26px;font-weight:900;line-height:1}
+.kpi-lbl{font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.4px}
+
+/* ALERT */
+.alert{border-radius:12px;padding:14px;margin-bottom:12px;display:flex;gap:10px;align-items:flex-start}
+.alert.urgent{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.22)}
+.alert.warning{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18)}
+.alert.ok{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15)}
+.alert-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.alert-title{font-size:13px;font-weight:700;margin-bottom:3px}
+.alert.urgent .alert-title{color:#f87171}
+.alert.warning .alert-title{color:#fbbf24}
+.alert.ok .alert-title{color:#4ade80}
+.alert-text{font-size:12px;color:var(--muted2);line-height:1.5}
+.alert-action{margin-top:8px}
+.btn-mini{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;border:none;cursor:pointer;font-size:12px;font-weight:700;transition:all .2s}
+.btn-resolve{background:rgba(34,197,94,.1);color:var(--green)}
+.btn-call{background:rgba(99,102,241,.1);color:var(--indigo2)}
+.btn-primary{background:linear-gradient(135deg,var(--indigo),#8b5cf6);color:#fff;padding:12px;width:100%;border-radius:10px;border:none;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+
+/* GROUP CARDS */
+.group-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:12px}
+.gc-header{padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--border)}
+.gc-title{font-size:15px;font-weight:800;color:#fff;margin-bottom:2px}
+.gc-sub  {font-size:12px;color:var(--muted)}
+.status-badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;flex-shrink:0}
+.sb-ok  {background:rgba(34,197,94,.1);color:var(--green)}
+.sb-warn{background:rgba(245,158,11,.1);color:var(--orange)}
+.sb-err {background:rgba(239,68,68,.1);color:var(--red)}
+.gc-body{padding:14px 16px}
+.gc-row {display:flex;gap:8px;margin-bottom:8px;font-size:12px;color:var(--muted2);align-items:center}
+.gc-row svg{width:14px;height:14px;flex-shrink:0}
+.gc-progress{margin-top:10px}
+.prog-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px}
+.prog-bar{height:4px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--indigo),#8b5cf6)}
+.gc-actions{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border)}
+.gc-btn{flex:1;padding:9px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:5px}
+.gc-btn.call{background:rgba(99,102,241,.1);color:var(--indigo2)}
+.gc-btn.report{background:rgba(239,68,68,.09);color:var(--red)}
+.gc-btn.map{background:rgba(255,255,255,.05);color:var(--muted2)}
+
+/* TIMELINE MINI */
+.t-mini{display:flex;gap:0;margin:10px 0}
+.t-step{display:flex;flex-direction:column;align-items:center;flex:1}
+.t-step-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;border:1.5px solid;margin-bottom:4px}
+.t-step-dot.done  {background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.5);color:var(--green)}
+.t-step-dot.act   {background:rgba(99,102,241,.18);border-color:rgba(99,102,241,.7);color:var(--indigo2)}
+.t-step-dot.next  {background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1);color:var(--muted)}
+.t-step-lbl{font-size:9px;color:var(--muted);text-align:center;line-height:1.3}
+.t-line{flex:1;height:1.5px;background:var(--border);align-self:flex-start;margin-top:11px}
+.t-line.done{background:rgba(34,197,94,.3)}
+
+/* LOGBOOK */
+.logbook-form textarea{width:100%;padding:12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:14px;resize:none;outline:none;margin-bottom:10px}
+.logbook-form textarea:focus{border-color:rgba(99,102,241,.5)}
+.tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.rtag{padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .2s;background:rgba(255,255,255,.04);color:var(--muted);border-color:var(--border)}
+.rtag.sel{background:rgba(99,102,241,.12);color:var(--indigo2);border-color:rgba(99,102,241,.3)}
+
+/* PASSEGERS */
+.pax-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.pax-item:last-child{border-bottom:none}
+.pax-av{width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,.12);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--indigo2);flex-shrink:0}
+.pax-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:1px}
+.pax-info{font-size:11px;color:var(--muted)}
+.pax-flag{font-size:16px;margin-left:auto}
+.pax-room{font-size:11px;color:var(--muted2);margin-left:4px}
+
+/* DISPONIBILITE */
+.avail-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.avail-day{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:8px 4px;text-align:center;cursor:pointer;transition:all .2s}
+.avail-day:hover{border-color:rgba(99,102,241,.3)}
+.avail-day.ok  {background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3)}
+.avail-day.busy{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.2)}
+.avail-day.trip{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3)}
+.avail-d{font-size:10px;color:var(--muted);margin-bottom:2px}
+.avail-n{font-size:14px;font-weight:800;color:#fff}
+
+/* RIHLA premium burgundy + ivory theme */
+:root{--indigo:#A8371D;--indigo2:#C8472B;--bg:#F6EEE6;--bg2:#FFFFFF;--card:#FFFFFF;--border:#E7D9CF;--text:#201716;--muted:#7C6F69;--muted2:#514642}
+html,body{background:var(--bg)!important;color:var(--text)!important}
+.app-header,.tabs,.card,.kpi,.group-card,.avail-day{background:#FFFFFF!important;border-color:#E7D9CF!important;box-shadow:0 10px 26px rgba(62,19,14,.09)}
+.app-header{border-top:4px solid #5B1914}
+.tabs{box-shadow:0 -10px 24px rgba(62,19,14,.10)}
+.guide-av,.btn-primary{background:linear-gradient(135deg,#7C241A,#A8371D)!important;color:#FFFFFF!important}
+.card-title,.group-name,.guide-name,.avail-n{color:#201716!important}
+.tab.active,.kpi-val{color:#A8371D!important}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="app-header">
+  <div class="header-row">
+    <div class="guide-info">
+      <div class="guide-av">H</div>
+      <div>
+        <div class="guide-name">Hassan Benjelloun</div>
+        <div class="guide-role">Guide accompagnateur · Marrakech</div>
+      </div>
+    </div>
+    <button class="status-pill" id="statusBtn" onclick="toggleStatus()">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusTxt">Disponible</span>
+    </button>
+  </div>
+</div>
+
+<!-- PAGE: GROUPES -->
+<div id="page-groups" class="page active screen">
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--indigo2)">2</div>
+      <div class="kpi-lbl">Groupes actifs</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--orange)">40</div>
+      <div class="kpi-lbl">Pax total</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--red)">1</div>
+      <div class="kpi-lbl">Incidents</div>
+    </div>
+  </div>
+
+  <!-- ALERTE URGENTE -->
+  <div class="alert urgent">
+    <div class="alert-icon">🚨</div>
+    <div style="flex:1">
+      <div class="alert-title">Chambres non disponibles — Riad Kniza</div>
+      <div class="alert-text">2 chambres sur 8 prêtes seulement. Le groupe Berlin arrive dans 45 min. Contact hôtel requis.</div>
+      <div class="alert-action">
+        <button class="btn-mini btn-call" onclick="alert('Appel en cours: +212 524 387 200')">📞 Appeler l'hôtel</button>
+        <button class="btn-mini btn-resolve" onclick="this.parentElement.parentElement.parentElement.style.display='none'" style="margin-left:8px">✓ Résolu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GROUPE 1 -->
+  <div class="group-card">
+    <div class="gc-header">
+      <div>
+        <div class="gc-title">Circuit Impérial — Paris 🇫🇷</div>
+        <div class="gc-sub">Voyages Lumière · 24 pax · Sofitel Marrakech</div>
+      </div>
+      <span class="status-badge sb-ok">En ordre</span>
+    </div>
+    <div class="gc-body">
+      <div class="t-mini">
+        <div class="t-step">
+          <div class="t-step-dot done">✓</div>
+          <div class="t-step-lbl">Arrivée</div>
+        </div>
+        <div class="t-line done"></div>
+        <div class="t-step">
+          <div class="t-step-dot done">✓</div>
+          <div class="t-step-lbl">Hôtel</div>
+        </div>
+        <div class="t-line done"></div>
+        <div class="t-step">
+          <div class="t-step-dot done">✓</div>
+          <div class="t-step-lbl">Déjeuner</div>
+        </div>
+        <div class="t-line"></div>
+        <div class="t-step">
+          <div class="t-step-dot act">▶</div>
+          <div class="t-step-lbl">Souks</div>
+        </div>
+        <div class="t-line"></div>
+        <div class="t-step">
+          <div class="t-step-dot next">🎭</div>
+          <div class="t-step-lbl">Fantasia</div>
+        </div>
+      </div>
+      <div class="gc-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+        <span>RDV 12h30 — Place Djemaa el-Fna</span>
+      </div>
+      <div class="gc-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12L12 3l9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
+        <span>Chauffeur Khalid · Mercedes 45 places</span>
+      </div>
+      <div class="gc-progress">
+        <div class="prog-row"><span>Progression</span><span style="color:var(--indigo2);font-weight:700">57%</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:57%"></div></div>
+      </div>
+    </div>
+    <div class="gc-actions">
+      <a class="gc-btn call" href="tel:+212661234567">📞 Chauffeur</a>
+      <button class="gc-btn report" onclick="switchPage('incidents',document.querySelectorAll('.tab')[2])">🚨 Incident</button>
+      <a class="gc-btn map" href="https://maps.google.com" target="_blank">🗺️ GPS</a>
+    </div>
+  </div>
+
+  <!-- GROUPE 2 -->
+  <div class="group-card">
+    <div class="gc-header">
+      <div>
+        <div class="gc-title">Désert & Kasbahs — Berlin 🇩🇪</div>
+        <div class="gc-sub">Morocco Exclusive · 16 pax · Riad Kniza</div>
+      </div>
+      <span class="status-badge sb-warn">Retardé</span>
+    </div>
+    <div class="gc-body">
+      <div class="t-mini">
+        <div class="t-step">
+          <div class="t-step-dot done">✓</div>
+          <div class="t-step-lbl">Arrivée</div>
+        </div>
+        <div class="t-line done"></div>
+        <div class="t-step">
+          <div class="t-step-dot done">✓</div>
+          <div class="t-step-lbl">Transfert</div>
+        </div>
+        <div class="t-line"></div>
+        <div class="t-step">
+          <div class="t-step-dot act">▶</div>
+          <div class="t-step-lbl">Check-in</div>
+        </div>
+        <div class="t-line"></div>
+        <div class="t-step">
+          <div class="t-step-dot next">🍽️</div>
+          <div class="t-step-lbl">Déjeuner</div>
+        </div>
+        <div class="t-line"></div>
+        <div class="t-step">
+          <div class="t-step-dot next">🗺️</div>
+          <div class="t-step-lbl">Visite</div>
+        </div>
+      </div>
+      <div class="gc-row" style="color:#fbbf24">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>⚠ Vol LH6036 +30min · 2 chambres indisponibles avant 15h</span>
+      </div>
+      <div class="gc-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12L12 3l9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
+        <span>Chauffeur Ahmed · Déjeuner décalé 14h30</span>
+      </div>
+    </div>
+    <div class="gc-actions">
+      <a class="gc-btn call" href="tel:+212664112233">📞 Chauffeur</a>
+      <button class="gc-btn report" onclick="switchPage('incidents',document.querySelectorAll('.tab')[2])">🚨 Incident</button>
+      <a class="gc-btn map" href="https://maps.google.com" target="_blank">🗺️ GPS</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- PAGE: PASSAGERS -->
+<div id="page-pax" class="page screen">
+  <div class="card">
+    <div class="card-title"><span>👥</span>Passagers — Circuit Paris (24 pax)</div>
+    <div class="pax-item">
+      <div class="pax-av">MD</div>
+      <div>
+        <div class="pax-name">Marie Dubois</div>
+        <div class="pax-info">Chambre 412 · DBL · Allergie noix ⚠️</div>
+      </div>
+      <div class="pax-flag">🇫🇷</div>
+    </div>
+    <div class="pax-item">
+      <div class="pax-av">PL</div>
+      <div>
+        <div class="pax-name">Pierre Lefebvre</div>
+        <div class="pax-info">Chambre 412 · DBL</div>
+      </div>
+      <div class="pax-flag">🇫🇷</div>
+    </div>
+    <div class="pax-item">
+      <div class="pax-av">SM</div>
+      <div>
+        <div class="pax-name">Sophie Martin</div>
+        <div class="pax-info">Chambre 418 · SGL · Végétarienne</div>
+      </div>
+      <div class="pax-flag">🇫🇷</div>
+    </div>
+    <div class="pax-item">
+      <div class="pax-av">AB</div>
+      <div>
+        <div class="pax-name">Ahmed Bouazizi</div>
+        <div class="pax-info">Chambre 420 · DBL</div>
+      </div>
+      <div class="pax-flag">🇧🇪</div>
+    </div>
+    <div class="pax-item">
+      <div class="pax-av">+</div>
+      <div>
+        <div class="pax-name" style="color:var(--muted)">20 autres passagers…</div>
+        <div class="pax-info">Voir la rooming list complète</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>⚠️</span>Alertes spéciales</div>
+    <div class="alert warning" style="margin-bottom:8px">
+      <div class="alert-icon">🌾</div>
+      <div>
+        <div class="alert-title">Mme Dubois — Allergie noix</div>
+        <div class="alert-text">Chambre 412 · Informer tous les restaurants du circuit</div>
+      </div>
+    </div>
+    <div class="alert ok" style="margin-bottom:0">
+      <div class="alert-icon">🥗</div>
+      <div>
+        <div class="alert-title">Mme Martin — Menu végétarien</div>
+        <div class="alert-text">Chambre 418 · Confirmer avec les restaurants</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: INCIDENTS -->
+<div id="page-incidents" class="page screen">
+  <div class="card">
+    <div class="card-title"><span>🚨</span>Signaler un incident</div>
+    <div class="logbook-form">
+      <div class="tag-row">
+        <span class="rtag sel" onclick="toggleTag(this)">✈️ Vol</span>
+        <span class="rtag" onclick="toggleTag(this)">🚗 Chauffeur</span>
+        <span class="rtag" onclick="toggleTag(this)">🏨 Hôtel</span>
+        <span class="rtag" onclick="toggleTag(this)">🍽️ Restaurant</span>
+        <span class="rtag" onclick="toggleTag(this)">🏥 Médical</span>
+        <span class="rtag" onclick="toggleTag(this)">💰 Paiement</span>
+        <span class="rtag" onclick="toggleTag(this)">⚠️ Autre</span>
+      </div>
+      <textarea id="incidentText" rows="4" placeholder="Décrivez l'incident, les actions prises et la situation actuelle..."></textarea>
+      <button class="btn-primary" onclick="submitIncident()">🚨 Signaler à l'opérateur</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>📋</span>Incidents du jour</div>
+    <div class="alert warning">
+      <div class="alert-icon">🏨</div>
+      <div style="flex:1">
+        <div class="alert-title">2 chambres indisponibles — Riad Kniza</div>
+        <div class="alert-text">13:35 · Bagages en consigne, salon VIP activé. Attente disponibilité 15h.</div>
+        <div class="alert-action"><span style="font-size:11px;color:var(--orange)">● En cours</span></div>
+      </div>
+    </div>
+    <div class="alert ok" style="margin-bottom:0">
+      <div class="alert-icon">✈️</div>
+      <div style="flex:1">
+        <div class="alert-title">Retard vol LH6036 — Résolu</div>
+        <div class="alert-text">12:15 · +30 min · Planning décalé, restaurant prévenu. Résolu en 8 min.</div>
+        <div class="alert-action"><span style="font-size:11px;color:var(--green)">✓ Résolu</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: LOGBOOK -->
+<div id="page-logbook" class="page screen">
+  <div class="card">
+    <div class="card-title"><span>📖</span>Journal de bord — 28 Avril 2026</div>
+    <div class="logbook-form">
+      <div class="tag-row">
+        <span class="rtag sel" onclick="toggleTag(this)">📝 Observation</span>
+        <span class="rtag" onclick="toggleTag(this)">💡 Suggestion</span>
+        <span class="rtag" onclick="toggleTag(this)">🌟 Point positif</span>
+        <span class="rtag" onclick="toggleTag(this)">⚠️ Problème</span>
+      </div>
+      <textarea id="logbookText" rows="5" placeholder="Notez vos observations, retours clients, suggestions d'amélioration du circuit...&#10;&#10;Ex: Le guide local à Bahia était excellent. Les clients ont adoré le souk des teinturiers. Restaurant Dar Moha — qualité irréprochable."></textarea>
+      <button class="btn-primary" onclick="submitLog()">📨 Envoyer au bureau</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>⏱️</span>Entrées précédentes</div>
+    <div style="padding:12px;background:rgba(255,255,255,.03);border-radius:10px;border:1px solid var(--border);margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:700;color:var(--indigo2)">📝 Observation · 11:20</span>
+        <span style="font-size:10px;color:var(--muted)">Circuit Paris</span>
+      </div>
+      <p style="font-size:13px;color:var(--muted2)">Visite Palais Bahia — groupe très réceptif. Mme Dubois très intéressée par l'artisanat — prévoir arrêt coopérative demain.</p>
+    </div>
+    <div style="padding:12px;background:rgba(34,197,94,.04);border-radius:10px;border:1px solid rgba(34,197,94,.12)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:700;color:#4ade80">🌟 Point positif · 13:30</span>
+        <span style="font-size:10px;color:var(--muted)">Circuit Paris</span>
+      </div>
+      <p style="font-size:13px;color:var(--muted2)">Restaurant Dar Moha — service 5 étoiles. Menu adapté allergie noix sans problème. À conserver au programme.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>📅</span>Disponibilité — Mai 2026</div>
+    <div class="avail-grid">
+      <div class="avail-day busy"><div class="avail-d">L</div><div class="avail-n">1</div></div>
+      <div class="avail-day trip"><div class="avail-d">M</div><div class="avail-n">2</div></div>
+      <div class="avail-day trip"><div class="avail-d">M</div><div class="avail-n">3</div></div>
+      <div class="avail-day trip"><div class="avail-d">J</div><div class="avail-n">4</div></div>
+      <div class="avail-day ok" onclick="toggleAvail(this)"><div class="avail-d">V</div><div class="avail-n">5</div></div>
+      <div class="avail-day ok" onclick="toggleAvail(this)"><div class="avail-d">S</div><div class="avail-n">6</div></div>
+      <div class="avail-day ok" onclick="toggleAvail(this)"><div class="avail-d">D</div><div class="avail-n">7</div></div>
+      <div class="avail-day ok" onclick="toggleAvail(this)"><div class="avail-d">L</div><div class="avail-n">8</div></div>
+      <div class="avail-day ok" onclick="toggleAvail(this)"><div class="avail-d">M</div><div class="avail-n">9</div></div>
+      <div class="avail-day busy"><div class="avail-d">M</div><div class="avail-n">10</div></div>
+      <div class="avail-day busy"><div class="avail-d">J</div><div class="avail-n">11</div></div>
+      <div class="avail-day ok" onclick="toggleAvail(this)"><div class="avail-d">V</div><div class="avail-n">12</div></div>
+      <div class="avail-day ok" onclick="toggleAvail(this)"><div class="avail-d">S</div><div class="avail-n">13</div></div>
+      <div class="avail-day ok" onclick="toggleAvail(this)"><div class="avail-d">D</div><div class="avail-n">14</div></div>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:10px;font-size:11px;color:var(--muted)">
+      <span style="color:var(--green)">■ Disponible</span>
+      <span style="color:var(--red)">■ Indisponible</span>
+      <span style="color:var(--indigo2)">■ Mission</span>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<nav class="tabs">
+  <button class="tab active" onclick="switchPage('groups',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+    Groupes
+  </button>
+  <button class="tab" onclick="switchPage('pax',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Passagers
+  </button>
+  <button class="tab" onclick="switchPage('incidents',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Incidents
+    <div class="notif-badge">1</div>
+  </button>
+  <button class="tab" onclick="switchPage('logbook',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    Logbook
+  </button>
+</nav>
+
+<script>
+function switchPage(id, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
+  document.getElementById('page-'+id).classList.add('active')
+  btn.classList.add('active')
+  window.scrollTo({top:0,behavior:'smooth'})
+}
+function toggleTag(el){el.classList.toggle('sel')}
+function toggleAvail(el){
+  if(el.classList.contains('ok'))     {el.classList.replace('ok','busy')}
+  else if(el.classList.contains('busy')){el.classList.replace('busy','ok')}
+}
+function submitIncident(){
+  const t=document.getElementById('incidentText').value
+  if(!t.trim()){alert('Veuillez décrire l\'incident.');return}
+  alert('✅ Incident signalé à l\'opérateur S\'TOURS.\nUn responsable va vous contacter sous 5 minutes.')
+  document.getElementById('incidentText').value=''
+}
+function submitLog(){
+  const t=document.getElementById('logbookText').value
+  if(!t.trim()){alert('Le champ est vide.');return}
+  alert('✅ Entrée enregistrée dans le journal de bord RIHLA.')
+  document.getElementById('logbookText').value=''
+}
+let statusOk=true
+function toggleStatus(){
+  statusOk=!statusOk
+  const dot=document.getElementById('statusDot')
+  const txt=document.getElementById('statusTxt')
+  const btn=document.getElementById('statusBtn')
+  if(statusOk){
+    dot.style.background='#22c55e';txt.textContent='Disponible'
+    btn.style.background='rgba(34,197,94,.1)';btn.style.color='#22c55e'
+    btn.style.borderColor='rgba(34,197,94,.25)'
+  } else {
+    dot.style.background='#ef4444';dot.style.animation='none'
+    txt.textContent='Indisponible'
+    btn.style.background='rgba(239,68,68,.1)';btn.style.color='#ef4444'
+    btn.style.borderColor='rgba(239,68,68,.25)'
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+╔══════════════════════════════════════════════════════╗
+║          STOURS CRM — Instructions de lancement      ║
+╚══════════════════════════════════════════════════════╝
+
+PRÉREQUIS
+─────────
+Python 3.9+ installé : https://www.python.org/downloads/
+
+INSTALLATION (une seule fois)
+──────────────────────────────
+Ouvrez un terminal dans le dossier "stours_crm", puis :
+
+    pip install -r requirements.txt
+
+LANCEMENT
+─────────
+    streamlit run app.py
+
+L'app s'ouvre automatiquement sur : http://localhost:8501
+
+FICHIERS
+────────
+  app.py           — Application Streamlit principale
+  database.py      — Modèles SQLite (4 tables)
+  requirements.txt — Dépendances Python
+  stours_crm.db    — Base de données (créée au 1er lancement)
+
+MODULES DISPONIBLES
+───────────────────
+  📊 Tableau de bord  — KPIs, graphiques CA, statuts, nationalités
+  👥 Clients          — Ajout, modification, suppression, recherche
+  ✈️  Voyages          — Catalogue circuits avec cartes visuelles
+  📋 Devis            — Création, suivi et changement de statut
+  🏨 Réservations     — Bookings avec gestion acomptes/soldes
+  ⚙️  Paramètres       — Export CSV, informations système
+
+DONNÉES DÉMO INCLUSES
+──────────────────────
+  • 5 clients (France, Allemagne, EAU, UK)
+  • 6 circuits Maroc (Culture, Aventure, Luxe...)
+  • 5 devis avec statuts variés
+  • 2 réservations confirmées
+
+────────────────────────────────────────────────────────
+© 2026 STOURS DMC — stours.ma
