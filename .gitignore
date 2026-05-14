@@ -78,6 +78,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # ─── Packaged archives / local scratch ─────────────────────────
+/payload.json
 *.zip
 *.tar
 *.tar.gz
