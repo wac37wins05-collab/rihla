@@ -30,6 +30,7 @@ MULTI-TENANT RULES
 
 from fastapi import Depends, HTTPException, status
 from app.core.security import get_current_user
+from app.modules.auth.rbac import has_permission, normalize_role
 
 
 async def require_auth(current_user: dict = Depends(get_current_user)) -> dict:
@@ -65,8 +66,9 @@ async def get_tenant_id(current_user: dict = Depends(get_current_user)) -> str:
 def require_role(*allowed_roles: str):
     """Factory returning a dependency that enforces role-based access."""
     async def _check_role(current_user: dict = Depends(get_current_user)) -> dict:
-        role = current_user.get("role", "")
-        if role not in allowed_roles and "super_admin" not in [role]:
+        role = normalize_role(current_user.get("role", ""))
+        allowed = {normalize_role(allowed_role) for allowed_role in allowed_roles}
+        if role not in allowed and role not in {"super_admin", "ceo"}:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Rôle requis : {', '.join(allowed_roles)}",
@@ -79,7 +81,7 @@ def require_permission(permission: str):
     """Factory returning a dependency that enforces a specific permission."""
     async def _check_permission(current_user: dict = Depends(get_current_user)) -> dict:
         perms = current_user.get("permissions", [])
-        if "*" not in perms and permission not in perms:
+        if not has_permission(current_user.get("role"), perms, permission):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Permission requise : {permission}",

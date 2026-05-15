@@ -33,6 +33,22 @@ class AccountBase(BaseModel):
     preferences: Optional[dict[str, Any]] = None
     description: Optional[str] = None
     avatar_url: Optional[str] = None
+
+    passport_number: Optional[str] = None
+    passport_expires_at: Optional[date] = None
+    birthday: Optional[date] = None
+    client_history: Optional[dict[str, Any]] = None
+    documents: Optional[list[dict[str, Any]]] = None
+    agency_commission_pct: Optional[float] = None
+    annual_revenue_mad: Optional[float] = 0
+    conversion_rate_pct: Optional[float] = None
+    special_pricing: Optional[dict[str, Any]] = None
+    negotiated_rates: Optional[dict[str, Any]] = None
+    travel_manager_name: Optional[str] = None
+    travel_manager_email: Optional[str] = None
+    finance_contact_name: Optional[str] = None
+    finance_contact_email: Optional[str] = None
+    corporate_agreement: Optional[dict[str, Any]] = None
     
     # CRM-1 computed
     pax_cumul: Optional[int] = 0
@@ -79,6 +95,21 @@ class AccountUpdate(BaseModel):
     preferences: Optional[dict[str, Any]] = None
     description: Optional[str] = None
     avatar_url: Optional[str] = None
+    passport_number: Optional[str] = None
+    passport_expires_at: Optional[date] = None
+    birthday: Optional[date] = None
+    client_history: Optional[dict[str, Any]] = None
+    documents: Optional[list[dict[str, Any]]] = None
+    agency_commission_pct: Optional[float] = None
+    annual_revenue_mad: Optional[float] = None
+    conversion_rate_pct: Optional[float] = None
+    special_pricing: Optional[dict[str, Any]] = None
+    negotiated_rates: Optional[dict[str, Any]] = None
+    travel_manager_name: Optional[str] = None
+    travel_manager_email: Optional[str] = None
+    finance_contact_name: Optional[str] = None
+    finance_contact_email: Optional[str] = None
+    corporate_agreement: Optional[dict[str, Any]] = None
 
 
 class AccountOut(AccountBase):
@@ -116,6 +147,7 @@ class ContactBase(BaseModel):
     first_name: str
     last_name: Optional[str] = None
     title: Optional[str] = None
+    job_title: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     mobile: Optional[str] = None
@@ -127,13 +159,14 @@ class ContactBase(BaseModel):
 
 
 class ContactIn(ContactBase):
-    pass
+    account_id: Optional[str] = None
 
 
 class ContactUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     title: Optional[str] = None
+    job_title: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     mobile: Optional[str] = None
@@ -146,7 +179,7 @@ class ContactUpdate(BaseModel):
 
 class ContactOut(ContactBase):
     id: str
-    account_id: str
+    account_id: Optional[str] = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
@@ -178,7 +211,9 @@ class ActivityOut(BaseModel):
 
 # ── Deal ───────────────────────────────────────────────────────────────────
 class DealIn(BaseModel):
-    title: str
+    title: Optional[str] = None
+    name: Optional[str] = None
+    account_id: Optional[str] = None
     stage: str = "qualification"
     amount_mad: float = 0
     probability: int = 20
@@ -218,6 +253,7 @@ class DealOut(BaseModel):
     account_id: str
     project_id: Optional[str] = None
     title: str
+    name: Optional[str] = None
     stage: str
     amount_mad: float
     probability: int
@@ -238,6 +274,7 @@ class DealOut(BaseModel):
     expected_departure_at: Optional[date] = None
     
     model_config = ConfigDict(from_attributes=True)
+
 
 
 # ── Task ───────────────────────────────────────────────────────────────────
@@ -278,7 +315,15 @@ class TaskOut(BaseModel):
 
 # ── Lead ───────────────────────────────────────────────────────────────────
 class LeadIn(BaseModel):
-    source: str
+    source: str = "web_form"
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    destination: Optional[str] = None
+    pax_count: Optional[int] = None
+    budget_min: Optional[float] = None
+    budget_max: Optional[float] = None
     subject: Optional[str] = None
     body: Optional[str] = None
     raw_payload: Optional[dict] = None
@@ -307,6 +352,7 @@ class LeadOut(LeadIn):
     qualified_at: Optional[datetime] = None
     converted_at: Optional[datetime] = None
     created_at: datetime
+    email: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 

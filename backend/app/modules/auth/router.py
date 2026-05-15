@@ -83,6 +83,8 @@ async def refresh(body: RefreshRequest) -> TokenResponse:
         claims["role"] = payload["role"]
     if payload.get("email"):
         claims["email"] = payload["email"]
+    if payload.get("permissions"):
+        claims["permissions"] = payload["permissions"]
     return TokenResponse(
         access_token=create_access_token(claims),
         refresh_token=create_refresh_token(claims),
@@ -112,6 +114,8 @@ async def get_current_user_info(
         raise NotFoundError("User not found")
     # Inject tenant context from JWT — frontend needs this to scope requests
     user_response.company_id = current_user.get("company_id")
+    if current_user.get("permissions"):
+        user_response.permissions = current_user["permissions"]
     return user_response
 
 

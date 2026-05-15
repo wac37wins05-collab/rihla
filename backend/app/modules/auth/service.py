@@ -8,7 +8,8 @@ from sqlalchemy import select
 logger = logging.getLogger(__name__)
 
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token
-from app.modules.auth.models import User, Role, RoleEnum
+from app.modules.auth.models import User, Role
+from app.modules.auth.rbac import permission_names_for_role
 from app.modules.auth.schemas import UserRegisterRequest, UserLoginRequest, UserResponse, PermissionResponse
 from app.shared.exceptions import BadRequestError, ConflictError, UnauthorizedError
 
@@ -85,7 +86,12 @@ class AuthService:
         if not user.is_active:
             raise UnauthorizedError("User account is inactive")
 
-        claims: dict = {"sub": user.id}
+        claims: dict = {
+            "sub": user.id,
+            "email": user.email,
+            "role": str(user.role.name),
+            "permissions": permission_names_for_role(user.role.name, list(user.role.permissions)),
+        }
 
         # Multi-tenant: bake the default company_id into the JWT so every
         # downstream request has tenant context. Falls back gracefully if
@@ -96,6 +102,7 @@ class AuthService:
             if default_uc:
                 claims["company_id"] = default_uc.company_id
                 claims["role"] = default_uc.role
+                claims["permissions"] = permission_names_for_role(default_uc.role, list(user.role.permissions))
         except Exception as exc:
             logger.warning("Company lookup failed for user %s: %s", user.id, exc)
 
@@ -113,15 +120,7 @@ class AuthService:
 
     def _user_to_response(self, user: User) -> UserResponse:
         """Convert User model to response schema."""
-        permissions = [
-            PermissionResponse(
-                id=p.id,
-                name=p.name,
-                module=p.module,
-                description=p.description,
-            )
-            for p in user.role.permissions
-        ]
+        permissions = permission_names_for_role(user.role.name, list(user.role.permissions))
 
         return UserResponse(
             id=user.id,
@@ -132,25 +131,26 @@ class AuthService:
             updated_at=user.updated_at,
             created_by=user.created_by,
             role=self._role_to_response(user.role),
-            permissions=[p.name for p in permissions],
+            permissions=permissions,
         )
 
     @staticmethod
     def _role_to_response(role: Role):
         """Convert Role model to response schema."""
         from app.modules.auth.schemas import RoleResponse
-        permissions = [
-            PermissionResponse(
-                id=p.id,
-                name=p.name,
-                module=p.module,
-                description=p.description,
-            )
-            for p in role.permissions
-        ]
+        permissions = permission_names_for_role(role.name, list(role.permissions))
+
         return RoleResponse(
             id=role.id,
             name=role.name,
             description=role.description,
-            permissions=permissions,
+            permissions=[
+                PermissionResponse(
+                    id=next((p.id for p in role.permissions if p.name == name), name),
+                    name=name,
+                    module=name.split(":", 1)[0],
+                    description=next((p.description for p in role.permissions if p.name == name), None),
+                )
+                for name in permissions
+            ],
         )

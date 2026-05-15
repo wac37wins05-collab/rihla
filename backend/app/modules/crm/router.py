@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.tenant import get_current_company_id
-from app.shared.dependencies import require_auth
+from app.shared.dependencies import require_auth, require_permission
 
 from app.modules.crm.models import (
     CrmAccount, CrmContact, CrmActivity, CrmDeal, CrmTask,
@@ -40,8 +40,12 @@ from app.modules.crm import (
 router = APIRouter(
     prefix="/crm",
     tags=["crm"],
-    dependencies=[Depends(require_auth)],
+    dependencies=[Depends(require_permission("crm:read"))],
 )
+
+CRM_WRITE = Depends(require_permission("crm:write"))
+CRM_PIPELINE = Depends(require_permission("crm:pipeline"))
+CRM_REPORTING = Depends(require_permission("crm:reporting"))
 
 
 # ── helpers ────────────────────────────────────────────────────────────────
@@ -58,7 +62,7 @@ OPEN_STAGES = {"qualification", "proposal", "negotiation"}
 def _account_or_404(db: Session, company_id: str, account_id: str) -> CrmAccount:
     a = (
         db.query(CrmAccount)
-        .filter(CrmAccount.company_id == company_id, CrmAccount.id == account_id)
+        .filter(CrmAccount.company_id == company_id, CrmAccount.id == account_id, CrmAccount.active == True)
         .first()
     )
     if not a:
@@ -120,6 +124,7 @@ def list_accounts(
 @router.post("/accounts", response_model=S.AccountOut, status_code=201)
 def create_account(
     data: S.AccountIn,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -146,6 +151,7 @@ def get_account(
 def update_account(
     account_id: str,
     data: S.AccountUpdate,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -160,6 +166,7 @@ def update_account(
 @router.delete("/accounts/{account_id}", status_code=204)
 def delete_account(
     account_id: str,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -234,6 +241,38 @@ def account_360(
 
 
 # ── Contacts ───────────────────────────────────────────────────────────────
+@router.get("/contacts", response_model=list[S.ContactOut])
+def list_all_contacts(
+    account_id: Optional[str] = None,
+    company_id: str = Depends(get_current_company_id),
+    db: Session = Depends(get_db),
+):
+    query = db.query(CrmContact).filter(CrmContact.company_id == company_id, CrmContact.active == True)
+    if account_id:
+        query = query.filter(CrmContact.account_id == account_id)
+    return query.order_by(CrmContact.is_primary.desc(), CrmContact.created_at.asc()).all()
+
+
+@router.post("/contacts", response_model=S.ContactOut, status_code=201)
+def create_contact_flat(
+    data: S.ContactIn,
+    _rbac: dict = CRM_WRITE,
+    company_id: str = Depends(get_current_company_id),
+    db: Session = Depends(get_db),
+):
+    account_id = data.account_id
+    _account_or_404(db, company_id, account_id)
+    payload = data.model_dump(exclude={"account_id"})
+    row = CrmContact(company_id=company_id, account_id=account_id, **payload)
+    db.add(row)
+    db.flush()
+    _log_activity(db, company_id=company_id, account_id=account_id,
+                  type_="note", title=f"Contact ajouté: {row.first_name} {row.last_name or ''}".strip())
+    db.commit()
+    db.refresh(row)
+    return row
+
+
 @router.get("/accounts/{account_id}/contacts", response_model=list[S.ContactOut])
 def list_contacts(
     account_id: str,
@@ -253,11 +292,13 @@ def list_contacts(
 def create_contact(
     account_id: str,
     data: S.ContactIn,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
     _account_or_404(db, company_id, account_id)
-    row = CrmContact(company_id=company_id, account_id=account_id, **data.model_dump())
+    payload = data.model_dump(exclude={"account_id"})
+    row = CrmContact(company_id=company_id, account_id=account_id, **payload)
     db.add(row)
     db.flush()
     _log_activity(db, company_id=company_id, account_id=account_id,
@@ -271,6 +312,7 @@ def create_contact(
 def update_contact(
     contact_id: str,
     data: S.ContactUpdate,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -289,6 +331,7 @@ def update_contact(
 @router.delete("/contacts/{contact_id}", status_code=204)
 def delete_contact(
     contact_id: str,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -323,6 +366,7 @@ def list_activities(
 def create_activity(
     account_id: str,
     data: S.ActivityIn,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -341,6 +385,33 @@ def create_activity(
 
 
 # ── Deals (pipeline) ───────────────────────────────────────────────────────
+@router.post("/deals", response_model=S.DealOut, status_code=201)
+def create_deal_flat(
+    data: S.DealIn,
+    _rbac: dict = CRM_PIPELINE,
+    company_id: str = Depends(get_current_company_id),
+    db: Session = Depends(get_db),
+):
+    account_id = data.account_id
+    if not account_id:
+        raise HTTPException(422, "account_id is required")
+    _account_or_404(db, company_id, account_id)
+    payload = data.model_dump(exclude={"account_id", "name"})
+    payload["title"] = payload.get("title") or data.name
+    if not payload["title"]:
+        raise HTTPException(422, "title is required")
+    row = CrmDeal(company_id=company_id, account_id=account_id, **payload)
+    db.add(row)
+    db.flush()
+    _log_activity(db, company_id=company_id, account_id=account_id, deal_id=row.id,
+                  type_="stage_change", title=f"Deal créé: {row.title} · {row.stage}")
+    db.commit()
+    db.refresh(row)
+    output = S.DealOut.model_validate(row)
+    output.name = output.title
+    return output
+
+
 @router.get("/deals", response_model=list[S.DealOut])
 def list_deals(
     account_id: Optional[str] = None,
@@ -363,24 +434,32 @@ def list_deals(
 def create_deal(
     account_id: str,
     data: S.DealIn,
+    _rbac: dict = CRM_PIPELINE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
     _account_or_404(db, company_id, account_id)
-    row = CrmDeal(company_id=company_id, account_id=account_id, **data.model_dump())
+    payload = data.model_dump(exclude={"account_id", "name"})
+    payload["title"] = payload.get("title") or data.name
+    if not payload["title"]:
+        raise HTTPException(422, "title is required")
+    row = CrmDeal(company_id=company_id, account_id=account_id, **payload)
     db.add(row)
     db.flush()
     _log_activity(db, company_id=company_id, account_id=account_id, deal_id=row.id,
                   type_="stage_change", title=f"Deal créé: {row.title} · {row.stage}")
     db.commit()
     db.refresh(row)
-    return row
+    output = S.DealOut.model_validate(row)
+    output.name = output.title
+    return output
 
 
 @router.patch("/deals/{deal_id}", response_model=S.DealOut)
 def update_deal(
     deal_id: str,
     data: S.DealUpdate,
+    _rbac: dict = CRM_PIPELINE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -407,6 +486,7 @@ def update_deal(
 @router.post("/deals/{deal_id}/win", response_model=S.DealOut)
 def win_deal(
     deal_id: str,
+    _rbac: dict = CRM_PIPELINE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -429,6 +509,7 @@ def win_deal(
 def lose_deal(
     deal_id: str,
     reason: Optional[str] = Query(None),
+    _rbac: dict = CRM_PIPELINE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -451,6 +532,7 @@ def lose_deal(
 @router.delete("/deals/{deal_id}", status_code=204)
 def delete_deal(
     deal_id: str,
+    _rbac: dict = CRM_PIPELINE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -495,6 +577,15 @@ def pipeline_view(
     )
 
 
+@router.get("/pipeline/dmc")
+def pipeline_dmc_legacy_view(
+    owner_user_id: Optional[str] = None,
+    company_id: str = Depends(get_current_company_id),
+    db: Session = Depends(get_db),
+):
+    return pipeline_dmc_view(owner_user_id=owner_user_id, company_id=company_id, db=db)
+
+
 # ── Tasks ──────────────────────────────────────────────────────────────────
 @router.get("/tasks", response_model=list[S.TaskOut])
 def list_tasks(
@@ -519,6 +610,7 @@ def list_tasks(
 @router.post("/tasks", response_model=S.TaskOut, status_code=201)
 def create_task(
     data: S.TaskIn,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -539,6 +631,7 @@ def create_task(
 def update_task(
     task_id: str,
     data: S.TaskUpdate,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -557,6 +650,7 @@ def update_task(
 @router.post("/tasks/{task_id}/complete", response_model=S.TaskOut)
 def complete_task(
     task_id: str,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -577,6 +671,7 @@ def complete_task(
 @router.delete("/tasks/{task_id}", status_code=204)
 def delete_task(
     task_id: str,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -655,6 +750,7 @@ def crm_dashboard(
 def move_deal_stage(
     deal_id: str,
     data: S.MoveStageIn,
+    _rbac: dict = CRM_PIPELINE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -794,6 +890,7 @@ def pipeline_dmc_time_in_stage(
 @router.post("/accounts/{account_id}/recompute", response_model=S.AccountOut)
 def recompute_account(
     account_id: str,
+    _rbac: dict = CRM_REPORTING,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -804,6 +901,7 @@ def recompute_account(
 
 @router.post("/recompute-all")
 def recompute_all(
+    _rbac: dict = CRM_REPORTING,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -828,6 +926,52 @@ def get_segments(
 
 
 # ── Leads ──────────────────────────────────────────────────────────────────
+@router.post("/leads", response_model=S.LeadOut, status_code=201)
+def create_lead(
+    data: S.LeadIn,
+    _rbac: dict = CRM_WRITE,
+    company_id: str = Depends(get_current_company_id),
+    db: Session = Depends(get_db),
+):
+    payload = data.model_dump()
+    payload["extracted_email"] = payload.get("extracted_email") or payload.get("email")
+    payload["extracted_phone"] = payload.get("extracted_phone") or payload.get("phone")
+    payload["extracted_pax"] = payload.get("extracted_pax") or payload.get("pax_count")
+    if payload.get("budget_max") is not None:
+        payload["extracted_budget"] = payload.get("extracted_budget") or payload.get("budget_max")
+    elif payload.get("budget_min") is not None:
+        payload["extracted_budget"] = payload.get("extracted_budget") or payload.get("budget_min")
+    if payload.get("destination"):
+        payload["extracted_destinations"] = payload.get("extracted_destinations") or [payload["destination"]]
+    if not payload.get("subject"):
+        name = " ".join(part for part in (payload.get("first_name"), payload.get("last_name")) if part)
+        payload["subject"] = name or payload.get("email") or "Lead CRM"
+    row = _ingest_lead(payload, payload["source"], company_id, db)
+    output = S.LeadOut.model_validate(row)
+    output.email = row.extracted_email
+    return output
+
+
+@router.get("/reporting")
+def reporting_overview(
+    company_id: str = Depends(get_current_company_id),
+    db: Session = Depends(get_db),
+):
+    return {
+        "dashboard": crm_dashboard(company_id=company_id, db=db).model_dump(),
+        "segments": get_segments(company_id=company_id, db=db),
+    }
+
+
+@router.post("/scoring/recompute")
+def scoring_recompute(
+    _rbac: dict = CRM_REPORTING,
+    company_id: str = Depends(get_current_company_id),
+    db: Session = Depends(get_db),
+):
+    return recompute_all(_rbac=_rbac, company_id=company_id, db=db)
+
+
 @router.get("/leads", response_model=list[S.LeadOut])
 def list_leads(
     status: Optional[str] = None,
@@ -904,6 +1048,7 @@ def _ingest_lead(payload: dict, source: str, company_id: str, db: Session) -> Cr
 @router.post("/leads/ingest/email", response_model=S.LeadOut, status_code=201)
 def ingest_email(
     payload: dict,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -915,6 +1060,7 @@ def ingest_email(
 @router.post("/leads/ingest/webform", response_model=S.LeadOut, status_code=201)
 def ingest_webform(
     payload: dict,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -926,6 +1072,7 @@ def ingest_webform(
 @router.post("/leads/ingest/whatsapp", response_model=S.LeadOut, status_code=201)
 def ingest_whatsapp(
     payload: dict,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -937,6 +1084,7 @@ def ingest_whatsapp(
 @router.post("/leads/ingest/instagram", response_model=S.LeadOut, status_code=201)
 def ingest_instagram(
     payload: dict,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -948,6 +1096,7 @@ def ingest_instagram(
 @router.post("/leads/ingest/portal-b2b", response_model=S.LeadOut, status_code=201)
 def ingest_portal_b2b(
     payload: dict,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -959,6 +1108,7 @@ def ingest_portal_b2b(
 @router.post("/leads/{lead_id}/qualify", response_model=S.LeadOut)
 def qualify_lead(
     lead_id: str,
+    _rbac: dict = CRM_PIPELINE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -979,6 +1129,7 @@ def qualify_lead(
 @router.post("/leads/{lead_id}/convert")
 def convert_lead(
     lead_id: str,
+    _rbac: dict = CRM_PIPELINE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -1054,6 +1205,7 @@ def convert_lead(
 def reject_lead(
     lead_id: str,
     body: dict,
+    _rbac: dict = CRM_PIPELINE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -1071,6 +1223,7 @@ def reject_lead(
 
 @router.post("/leads/seed-demo")
 def seed_demo_leads_endpoint(
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -1083,6 +1236,7 @@ def seed_demo_leads_endpoint(
 @router.get("/reporting/revenue-per-agent")
 def reporting_revenue(
     period: str = Query("ytd"),
+    _rbac: dict = CRM_REPORTING,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -1093,6 +1247,7 @@ def reporting_revenue(
 @router.get("/reporting/conversion-by-market")
 def reporting_markets(
     period: str = Query("ytd"),
+    _rbac: dict = CRM_REPORTING,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -1103,6 +1258,7 @@ def reporting_markets(
 @router.get("/reporting/win-loss")
 def reporting_win_loss(
     period: str = Query("ytd"),
+    _rbac: dict = CRM_REPORTING,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -1113,6 +1269,7 @@ def reporting_win_loss(
 @router.get("/reporting/nps")
 def reporting_nps(
     period: str = Query("ytd"),
+    _rbac: dict = CRM_REPORTING,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -1123,6 +1280,7 @@ def reporting_nps(
 @router.get("/reporting/forecast")
 def reporting_forecast(
     quarter: str = Query("Q2-2026"),
+    _rbac: dict = CRM_REPORTING,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -1132,6 +1290,7 @@ def reporting_forecast(
 
 @router.get("/reporting/churn")
 def reporting_churn(
+    _rbac: dict = CRM_REPORTING,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -1153,6 +1312,7 @@ def list_nurturing_sequences(
 @router.post("/nurturing/sequences/{sequence_id}/toggle", response_model=S.NurturingSequenceOut)
 def toggle_nurturing_sequence(
     sequence_id: str,
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
@@ -1170,6 +1330,7 @@ def toggle_nurturing_sequence(
 
 @router.post("/nurturing/seed")
 def seed_nurturing_sequences(
+    _rbac: dict = CRM_WRITE,
     company_id: str = Depends(get_current_company_id),
     db: Session = Depends(get_db),
 ):
