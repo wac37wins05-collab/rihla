@@ -56,5 +56,5 @@ def issue_tokens_for_company(
         "permissions": permission_names_for_role(role, list(user.role.permissions)),
     }
     access = create_access_token(payload)
-    refresh = create_refresh_token({"sub": user.id, "company_id": company.id})
+    refresh = create_refresh_token(payload)
     return access, refresh

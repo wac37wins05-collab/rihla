@@ -4,7 +4,7 @@
  *         follow_up_j5 → quote_v2 → decision_pending → deposit_received →
  *         ops_in_progress → completed_nps_sent
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   DndContext,
@@ -494,8 +494,11 @@ export function CrmPipelineDmcPage() {
   const { data: pipeline } = useQuery({
     queryKey: ['crm', 'pipeline-dmc'],
     queryFn: () => crmApi.pipelineDmc().then(r => r.data),
-    onSuccess: loadPipelineDeals,
-  } as any)
+  })
+
+  useEffect(() => {
+    if (pipeline) loadPipelineDeals(pipeline)
+  }, [pipeline])
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['crm', 'accounts', 'pipeline-create'],
