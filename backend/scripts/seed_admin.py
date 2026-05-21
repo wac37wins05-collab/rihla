@@ -50,7 +50,7 @@ ROLES = [
 ]
 
 ADMIN_USER = {
-    "email":     os.getenv("ADMIN_EMAIL", "admin@stours.local"),
+    "email":     os.getenv("ADMIN_EMAIL", "admin@stours.ma"),
     "password":  os.getenv("ADMIN_PASSWORD", "change-me-local-admin"),
     "full_name": os.getenv("ADMIN_FULL_NAME", "RIHLA Admin"),
     "role":      "super_admin",
@@ -72,6 +72,7 @@ def seed(db: Session) -> None:
         from app.modules.quotations.models import Quotation
         from app.modules.itineraries.models import Itinerary
         from app.modules.companies.models import Company, UserCompany
+        from app.modules.master_data.models import Partner, Article
         from app.modules.hotels.models import Hotel
         from app.modules.guides.models import Guide
         from app.modules.transports.models import Transport
@@ -160,9 +161,9 @@ def seed(db: Session) -> None:
             db.execute(
                 text("""
                     INSERT INTO companies (id, code, name, legal_name, currency,
-                                          is_active, created_at, updated_at, active)
+                                          fiscal_year_start, is_active, created_at, updated_at, active)
                     VALUES (:id, 'STOURS', 'STOURS VOYAGES', 'STOURS VOYAGES SARL',
-                            'MAD', 1, :now, :now, 1)
+                            'MAD', 1, 1, :now, :now, 1)
                 """),
                 {"id": cid, "now": _now()},
             )

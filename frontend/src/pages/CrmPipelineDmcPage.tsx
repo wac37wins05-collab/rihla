@@ -4,7 +4,7 @@
  *         follow_up_j5 → quote_v2 → decision_pending → deposit_received →
  *         ops_in_progress → completed_nps_sent
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   DndContext,
@@ -251,8 +251,19 @@ function KanbanColumn({
 
 /* ─── AddDealModal ───────────────────────────────────────────────────────── */
 
-function AddDealModal({ onClose, onAdd }: { onClose: () => void; onAdd: (d: Partial<CrmDeal>) => void }) {
+function AddDealModal({
+  accounts,
+  creating,
+  onClose,
+  onAdd,
+}: {
+  accounts: { id: string; name: string }[]
+  creating?: boolean
+  onClose: () => void
+  onAdd: (accountId: string, d: Partial<CrmDeal>) => void
+}) {
   const [title, setTitle]       = useState('')
+  const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
   const [amount, setAmount]     = useState('')
   const [pax, setPax]           = useState('')
   const [dest, setDest]         = useState('')
@@ -260,17 +271,16 @@ function AddDealModal({ onClose, onAdd }: { onClose: () => void; onAdd: (d: Part
   const [prob, setProb]         = useState(10)
 
   const submit = () => {
-    if (!title.trim()) return
-    onAdd({
-      id: `new_${Date.now()}`,
+    if (!title.trim() || !accountId) return
+    onAdd(accountId, {
       title: title.trim(),
       amount_mad: parseFloat(amount) || 0,
       pax: parseInt(pax) || undefined,
       destination: dest || undefined,
+      stage: 'qualification',
       dmc_stage: stage,
       probability: prob,
     })
-    onClose()
   }
 
   return (
@@ -293,6 +303,17 @@ function AddDealModal({ onClose, onAdd }: { onClose: () => void; onAdd: (d: Part
             placeholder="Titre du deal *"
             className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rihla/40"
           />
+
+          <select
+            value={accountId}
+            onChange={e => setAccountId(e.target.value)}
+            className="w-full px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rihla/40"
+          >
+            <option value="">Compte CRM *</option>
+            {accounts.map(account => (
+              <option key={account.id} value={account.id}>{account.name}</option>
+            ))}
+          </select>
 
           {/* Amount + PAX */}
           <div className="grid grid-cols-2 gap-3">
@@ -348,10 +369,10 @@ function AddDealModal({ onClose, onAdd }: { onClose: () => void; onAdd: (d: Part
 
           <button
             onClick={submit}
-            disabled={!title.trim()}
+            disabled={!title.trim() || !accountId || creating}
             className="w-full py-3 bg-rihla text-white font-bold rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-40"
           >
-            Créer le deal
+            {creating ? 'Création…' : 'Créer le deal'}
           </button>
         </div>
       </div>
@@ -464,17 +485,41 @@ export function CrmPipelineDmcPage() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   )
 
-  // Server query (falls back to demo)
+  const loadPipelineDeals = (data: any) => {
+    const serverDeals = data?.columns?.flatMap((column: { deals?: CrmDeal[] }) => column.deals ?? []) ?? []
+    setDeals(serverDeals)
+  }
+
+  // Server query (falls back to demo until the API returns)
   const { data: pipeline } = useQuery({
     queryKey: ['crm', 'pipeline-dmc'],
     queryFn: () => crmApi.pipelineDmc().then(r => r.data),
-    onSuccess: (data: any) => { if (data?.deals?.length) setDeals(data.deals) },
-  } as any)
+  })
+
+  useEffect(() => {
+    if (pipeline) loadPipelineDeals(pipeline)
+  }, [pipeline])
+
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['crm', 'accounts', 'pipeline-create'],
+    queryFn: () => crmApi.listAccounts().then(r => r.data),
+  })
 
   const moveMut = useMutation({
     mutationFn: ({ id, stage }: { id: string; stage: string }) =>
       crmApi.moveStage(id, { stage }).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['crm', 'pipeline-dmc'] }),
+  })
+
+  const createMut = useMutation({
+    mutationFn: ({ accountId, deal }: { accountId: string; deal: Partial<CrmDeal> }) =>
+      crmApi.createDeal(accountId, deal).then(r => r.data),
+    onSuccess: async () => {
+      const refreshed = await crmApi.pipelineDmc().then(r => r.data)
+      loadPipelineDeals(refreshed)
+      qc.invalidateQueries({ queryKey: ['crm', 'pipeline-dmc'] })
+      setShowAddModal(false)
+    },
   })
 
   // Derived
@@ -671,8 +716,10 @@ export function CrmPipelineDmcPage() {
       {/* Modals */}
       {showAddModal && (
         <AddDealModal
+          accounts={accounts.map(account => ({ id: account.id, name: account.name }))}
+          creating={createMut.isPending}
           onClose={() => setShowAddModal(false)}
-          onAdd={d => setDeals(prev => [...prev, d])}
+          onAdd={(accountId, deal) => createMut.mutate({ accountId, deal })}
         />
       )}
 

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, create_refresh_token
 from app.modules.auth.models import User
+from app.modules.auth.rbac import permission_names_for_role
 from app.modules.companies.models import Company, UserCompany
 
 
@@ -52,7 +53,8 @@ def issue_tokens_for_company(
         "email": user.email,
         "role": role,
         "company_id": company.id,
+        "permissions": permission_names_for_role(role, list(user.role.permissions)),
     }
     access = create_access_token(payload)
-    refresh = create_refresh_token({"sub": user.id, "company_id": company.id})
+    refresh = create_refresh_token(payload)
     return access, refresh

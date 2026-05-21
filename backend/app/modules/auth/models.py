@@ -12,8 +12,12 @@ class RoleEnum(str, Enum):
     """Enum of all available roles in the system."""
 
     SUPER_ADMIN = "super_admin"
+    CEO = "ceo"
     SALES_DIRECTOR = "sales_director"
     TRAVEL_DESIGNER = "travel_designer"
+    CONTRACTING_MANAGER = "contracting_manager"
+    HORIZON_TRANSPORT = "horizon_transport"
+    ACCOUNTING_MANAGER = "accounting_manager"
     QUOTATION_OFFICER = "quotation_officer"
     DATA_OPERATOR = "data_operator"
     SALES_AGENT = "sales_agent"

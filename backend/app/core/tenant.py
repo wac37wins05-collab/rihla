@@ -30,7 +30,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
         request.state.company_id = None
         request.state.user_role = None
 
-        auth = request.headers.get("authorization", "")
+        auth = request.headers.get("x-rihla-authorization") or request.headers.get("authorization", "")
         if auth.lower().startswith("bearer "):
             token = auth.split(" ", 1)[1].strip()
             payload = decode_access_token(token)
